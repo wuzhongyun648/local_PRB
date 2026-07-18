@@ -1,0 +1,791 @@
+{
+  "args": {
+    "datasets": [
+      "MovieLens",
+      "Facebook",
+      "GrQc"
+    ],
+    "methods": [
+      "EE-Net",
+      "NeuralUCB",
+      "NeuralTS",
+      "NeuralGreedy"
+    ],
+    "T": 10000,
+    "lamdba": 0.1,
+    "nu": 0.001,
+    "lr1": 0.1,
+    "lr2": 0.01,
+    "runs": 10,
+    "workers": 48
+  },
+  "datasets": [
+    "MovieLens",
+    "Facebook",
+    "GrQc"
+  ],
+  "methods": [
+    "EE-Net",
+    "NeuralUCB",
+    "NeuralTS",
+    "NeuralGreedy"
+  ],
+  "runs": 10,
+  "workers": 48,
+  "train_schedule": {
+    "before_2000": "every 50 rounds",
+    "from_2000": "every 100 rounds"
+  },
+  "seed_rule": "seed = run_id * 100 + 43",
+  "successes": [
+    {
+      "dataset": "MovieLens",
+      "method": "EE-Net",
+      "run_id": 0,
+      "seed": 43
+    },
+    {
+      "dataset": "MovieLens",
+      "method": "EE-Net",
+      "run_id": 1,
+      "seed": 143
+    },
+    {
+      "dataset": "MovieLens",
+      "method": "EE-Net",
+      "run_id": 2,
+      "seed": 243
+    },
+    {
+      "dataset": "MovieLens",
+      "method": "EE-Net",
+      "run_id": 3,
+      "seed": 343
+    },
+    {
+      "dataset": "MovieLens",
+      "method": "EE-Net",
+      "run_id": 4,
+      "seed": 443
+    },
+    {
+      "dataset": "MovieLens",
+      "method": "EE-Net",
+      "run_id": 5,
+      "seed": 543
+    },
+    {
+      "dataset": "MovieLens",
+      "method": "EE-Net",
+      "run_id": 6,
+      "seed": 643
+    },
+    {
+      "dataset": "MovieLens",
+      "method": "EE-Net",
+      "run_id": 7,
+      "seed": 743
+    },
+    {
+      "dataset": "MovieLens",
+      "method": "EE-Net",
+      "run_id": 8,
+      "seed": 843
+    },
+    {
+      "dataset": "MovieLens",
+      "method": "EE-Net",
+      "run_id": 9,
+      "seed": 943
+    },
+    {
+      "dataset": "MovieLens",
+      "method": "NeuralUCB",
+      "run_id": 0,
+      "seed": 43
+    },
+    {
+      "dataset": "MovieLens",
+      "method": "NeuralUCB",
+      "run_id": 1,
+      "seed": 143
+    },
+    {
+      "dataset": "MovieLens",
+      "method": "NeuralUCB",
+      "run_id": 2,
+      "seed": 243
+    },
+    {
+      "dataset": "MovieLens",
+      "method": "NeuralUCB",
+      "run_id": 3,
+      "seed": 343
+    },
+    {
+      "dataset": "MovieLens",
+      "method": "NeuralUCB",
+      "run_id": 4,
+      "seed": 443
+    },
+    {
+      "dataset": "MovieLens",
+      "method": "NeuralUCB",
+      "run_id": 5,
+      "seed": 543
+    },
+    {
+      "dataset": "MovieLens",
+      "method": "NeuralUCB",
+      "run_id": 6,
+      "seed": 643
+    },
+    {
+      "dataset": "MovieLens",
+      "method": "NeuralUCB",
+      "run_id": 7,
+      "seed": 743
+    },
+    {
+      "dataset": "MovieLens",
+      "method": "NeuralUCB",
+      "run_id": 8,
+      "seed": 843
+    },
+    {
+      "dataset": "MovieLens",
+      "method": "NeuralUCB",
+      "run_id": 9,
+      "seed": 943
+    },
+    {
+      "dataset": "MovieLens",
+      "method": "NeuralTS",
+      "run_id": 0,
+      "seed": 43
+    },
+    {
+      "dataset": "MovieLens",
+      "method": "NeuralTS",
+      "run_id": 1,
+      "seed": 143
+    },
+    {
+      "dataset": "MovieLens",
+      "method": "NeuralTS",
+      "run_id": 2,
+      "seed": 243
+    },
+    {
+      "dataset": "MovieLens",
+      "method": "NeuralTS",
+      "run_id": 3,
+      "seed": 343
+    },
+    {
+      "dataset": "MovieLens",
+      "method": "NeuralTS",
+      "run_id": 4,
+      "seed": 443
+    },
+    {
+      "dataset": "MovieLens",
+      "method": "NeuralTS",
+      "run_id": 5,
+      "seed": 543
+    },
+    {
+      "dataset": "MovieLens",
+      "method": "NeuralTS",
+      "run_id": 6,
+      "seed": 643
+    },
+    {
+      "dataset": "MovieLens",
+      "method": "NeuralTS",
+      "run_id": 7,
+      "seed": 743
+    },
+    {
+      "dataset": "MovieLens",
+      "method": "NeuralTS",
+      "run_id": 8,
+      "seed": 843
+    },
+    {
+      "dataset": "MovieLens",
+      "method": "NeuralTS",
+      "run_id": 9,
+      "seed": 943
+    },
+    {
+      "dataset": "MovieLens",
+      "method": "NeuralGreedy",
+      "run_id": 0,
+      "seed": 43
+    },
+    {
+      "dataset": "MovieLens",
+      "method": "NeuralGreedy",
+      "run_id": 1,
+      "seed": 143
+    },
+    {
+      "dataset": "MovieLens",
+      "method": "NeuralGreedy",
+      "run_id": 2,
+      "seed": 243
+    },
+    {
+      "dataset": "MovieLens",
+      "method": "NeuralGreedy",
+      "run_id": 3,
+      "seed": 343
+    },
+    {
+      "dataset": "MovieLens",
+      "method": "NeuralGreedy",
+      "run_id": 4,
+      "seed": 443
+    },
+    {
+      "dataset": "MovieLens",
+      "method": "NeuralGreedy",
+      "run_id": 5,
+      "seed": 543
+    },
+    {
+      "dataset": "MovieLens",
+      "method": "NeuralGreedy",
+      "run_id": 6,
+      "seed": 643
+    },
+    {
+      "dataset": "MovieLens",
+      "method": "NeuralGreedy",
+      "run_id": 7,
+      "seed": 743
+    },
+    {
+      "dataset": "MovieLens",
+      "method": "NeuralGreedy",
+      "run_id": 8,
+      "seed": 843
+    },
+    {
+      "dataset": "MovieLens",
+      "method": "NeuralGreedy",
+      "run_id": 9,
+      "seed": 943
+    },
+    {
+      "dataset": "Facebook",
+      "method": "EE-Net",
+      "run_id": 0,
+      "seed": 43
+    },
+    {
+      "dataset": "Facebook",
+      "method": "EE-Net",
+      "run_id": 1,
+      "seed": 143
+    },
+    {
+      "dataset": "Facebook",
+      "method": "EE-Net",
+      "run_id": 2,
+      "seed": 243
+    },
+    {
+      "dataset": "Facebook",
+      "method": "EE-Net",
+      "run_id": 3,
+      "seed": 343
+    },
+    {
+      "dataset": "Facebook",
+      "method": "EE-Net",
+      "run_id": 4,
+      "seed": 443
+    },
+    {
+      "dataset": "Facebook",
+      "method": "EE-Net",
+      "run_id": 5,
+      "seed": 543
+    },
+    {
+      "dataset": "Facebook",
+      "method": "EE-Net",
+      "run_id": 6,
+      "seed": 643
+    },
+    {
+      "dataset": "Facebook",
+      "method": "EE-Net",
+      "run_id": 7,
+      "seed": 743
+    },
+    {
+      "dataset": "Facebook",
+      "method": "EE-Net",
+      "run_id": 8,
+      "seed": 843
+    },
+    {
+      "dataset": "Facebook",
+      "method": "EE-Net",
+      "run_id": 9,
+      "seed": 943
+    },
+    {
+      "dataset": "Facebook",
+      "method": "NeuralUCB",
+      "run_id": 0,
+      "seed": 43
+    },
+    {
+      "dataset": "Facebook",
+      "method": "NeuralUCB",
+      "run_id": 1,
+      "seed": 143
+    },
+    {
+      "dataset": "Facebook",
+      "method": "NeuralUCB",
+      "run_id": 2,
+      "seed": 243
+    },
+    {
+      "dataset": "Facebook",
+      "method": "NeuralUCB",
+      "run_id": 3,
+      "seed": 343
+    },
+    {
+      "dataset": "Facebook",
+      "method": "NeuralUCB",
+      "run_id": 4,
+      "seed": 443
+    },
+    {
+      "dataset": "Facebook",
+      "method": "NeuralUCB",
+      "run_id": 5,
+      "seed": 543
+    },
+    {
+      "dataset": "Facebook",
+      "method": "NeuralUCB",
+      "run_id": 6,
+      "seed": 643
+    },
+    {
+      "dataset": "Facebook",
+      "method": "NeuralUCB",
+      "run_id": 7,
+      "seed": 743
+    },
+    {
+      "dataset": "Facebook",
+      "method": "NeuralUCB",
+      "run_id": 8,
+      "seed": 843
+    },
+    {
+      "dataset": "Facebook",
+      "method": "NeuralUCB",
+      "run_id": 9,
+      "seed": 943
+    },
+    {
+      "dataset": "Facebook",
+      "method": "NeuralTS",
+      "run_id": 0,
+      "seed": 43
+    },
+    {
+      "dataset": "Facebook",
+      "method": "NeuralTS",
+      "run_id": 1,
+      "seed": 143
+    },
+    {
+      "dataset": "Facebook",
+      "method": "NeuralTS",
+      "run_id": 2,
+      "seed": 243
+    },
+    {
+      "dataset": "Facebook",
+      "method": "NeuralTS",
+      "run_id": 3,
+      "seed": 343
+    },
+    {
+      "dataset": "Facebook",
+      "method": "NeuralTS",
+      "run_id": 4,
+      "seed": 443
+    },
+    {
+      "dataset": "Facebook",
+      "method": "NeuralTS",
+      "run_id": 5,
+      "seed": 543
+    },
+    {
+      "dataset": "Facebook",
+      "method": "NeuralTS",
+      "run_id": 6,
+      "seed": 643
+    },
+    {
+      "dataset": "Facebook",
+      "method": "NeuralTS",
+      "run_id": 7,
+      "seed": 743
+    },
+    {
+      "dataset": "Facebook",
+      "method": "NeuralTS",
+      "run_id": 8,
+      "seed": 843
+    },
+    {
+      "dataset": "Facebook",
+      "method": "NeuralTS",
+      "run_id": 9,
+      "seed": 943
+    },
+    {
+      "dataset": "Facebook",
+      "method": "NeuralGreedy",
+      "run_id": 0,
+      "seed": 43
+    },
+    {
+      "dataset": "Facebook",
+      "method": "NeuralGreedy",
+      "run_id": 1,
+      "seed": 143
+    },
+    {
+      "dataset": "Facebook",
+      "method": "NeuralGreedy",
+      "run_id": 2,
+      "seed": 243
+    },
+    {
+      "dataset": "Facebook",
+      "method": "NeuralGreedy",
+      "run_id": 3,
+      "seed": 343
+    },
+    {
+      "dataset": "Facebook",
+      "method": "NeuralGreedy",
+      "run_id": 4,
+      "seed": 443
+    },
+    {
+      "dataset": "Facebook",
+      "method": "NeuralGreedy",
+      "run_id": 5,
+      "seed": 543
+    },
+    {
+      "dataset": "Facebook",
+      "method": "NeuralGreedy",
+      "run_id": 6,
+      "seed": 643
+    },
+    {
+      "dataset": "Facebook",
+      "method": "NeuralGreedy",
+      "run_id": 7,
+      "seed": 743
+    },
+    {
+      "dataset": "Facebook",
+      "method": "NeuralGreedy",
+      "run_id": 8,
+      "seed": 843
+    },
+    {
+      "dataset": "Facebook",
+      "method": "NeuralGreedy",
+      "run_id": 9,
+      "seed": 943
+    },
+    {
+      "dataset": "GrQc",
+      "method": "EE-Net",
+      "run_id": 0,
+      "seed": 43
+    },
+    {
+      "dataset": "GrQc",
+      "method": "EE-Net",
+      "run_id": 1,
+      "seed": 143
+    },
+    {
+      "dataset": "GrQc",
+      "method": "EE-Net",
+      "run_id": 2,
+      "seed": 243
+    },
+    {
+      "dataset": "GrQc",
+      "method": "EE-Net",
+      "run_id": 3,
+      "seed": 343
+    },
+    {
+      "dataset": "GrQc",
+      "method": "EE-Net",
+      "run_id": 4,
+      "seed": 443
+    },
+    {
+      "dataset": "GrQc",
+      "method": "EE-Net",
+      "run_id": 5,
+      "seed": 543
+    },
+    {
+      "dataset": "GrQc",
+      "method": "EE-Net",
+      "run_id": 6,
+      "seed": 643
+    },
+    {
+      "dataset": "GrQc",
+      "method": "EE-Net",
+      "run_id": 7,
+      "seed": 743
+    },
+    {
+      "dataset": "GrQc",
+      "method": "EE-Net",
+      "run_id": 8,
+      "seed": 843
+    },
+    {
+      "dataset": "GrQc",
+      "method": "EE-Net",
+      "run_id": 9,
+      "seed": 943
+    },
+    {
+      "dataset": "GrQc",
+      "method": "NeuralUCB",
+      "run_id": 0,
+      "seed": 43
+    },
+    {
+      "dataset": "GrQc",
+      "method": "NeuralUCB",
+      "run_id": 1,
+      "seed": 143
+    },
+    {
+      "dataset": "GrQc",
+      "method": "NeuralUCB",
+      "run_id": 2,
+      "seed": 243
+    },
+    {
+      "dataset": "GrQc",
+      "method": "NeuralUCB",
+      "run_id": 3,
+      "seed": 343
+    },
+    {
+      "dataset": "GrQc",
+      "method": "NeuralUCB",
+      "run_id": 4,
+      "seed": 443
+    },
+    {
+      "dataset": "GrQc",
+      "method": "NeuralUCB",
+      "run_id": 5,
+      "seed": 543
+    },
+    {
+      "dataset": "GrQc",
+      "method": "NeuralUCB",
+      "run_id": 6,
+      "seed": 643
+    },
+    {
+      "dataset": "GrQc",
+      "method": "NeuralUCB",
+      "run_id": 7,
+      "seed": 743
+    },
+    {
+      "dataset": "GrQc",
+      "method": "NeuralUCB",
+      "run_id": 8,
+      "seed": 843
+    },
+    {
+      "dataset": "GrQc",
+      "method": "NeuralUCB",
+      "run_id": 9,
+      "seed": 943
+    },
+    {
+      "dataset": "GrQc",
+      "method": "NeuralTS",
+      "run_id": 0,
+      "seed": 43
+    },
+    {
+      "dataset": "GrQc",
+      "method": "NeuralTS",
+      "run_id": 1,
+      "seed": 143
+    },
+    {
+      "dataset": "GrQc",
+      "method": "NeuralTS",
+      "run_id": 2,
+      "seed": 243
+    },
+    {
+      "dataset": "GrQc",
+      "method": "NeuralTS",
+      "run_id": 3,
+      "seed": 343
+    },
+    {
+      "dataset": "GrQc",
+      "method": "NeuralTS",
+      "run_id": 4,
+      "seed": 443
+    },
+    {
+      "dataset": "GrQc",
+      "method": "NeuralTS",
+      "run_id": 5,
+      "seed": 543
+    },
+    {
+      "dataset": "GrQc",
+      "method": "NeuralTS",
+      "run_id": 6,
+      "seed": 643
+    },
+    {
+      "dataset": "GrQc",
+      "method": "NeuralTS",
+      "run_id": 7,
+      "seed": 743
+    },
+    {
+      "dataset": "GrQc",
+      "method": "NeuralTS",
+      "run_id": 8,
+      "seed": 843
+    },
+    {
+      "dataset": "GrQc",
+      "method": "NeuralTS",
+      "run_id": 9,
+      "seed": 943
+    },
+    {
+      "dataset": "GrQc",
+      "method": "NeuralGreedy",
+      "run_id": 0,
+      "seed": 43
+    },
+    {
+      "dataset": "GrQc",
+      "method": "NeuralGreedy",
+      "run_id": 1,
+      "seed": 143
+    },
+    {
+      "dataset": "GrQc",
+      "method": "NeuralGreedy",
+      "run_id": 2,
+      "seed": 243
+    },
+    {
+      "dataset": "GrQc",
+      "method": "NeuralGreedy",
+      "run_id": 3,
+      "seed": 343
+    },
+    {
+      "dataset": "GrQc",
+      "method": "NeuralGreedy",
+      "run_id": 4,
+      "seed": 443
+    },
+    {
+      "dataset": "GrQc",
+      "method": "NeuralGreedy",
+      "run_id": 5,
+      "seed": 543
+    },
+    {
+      "dataset": "GrQc",
+      "method": "NeuralGreedy",
+      "run_id": 6,
+      "seed": 643
+    },
+    {
+      "dataset": "GrQc",
+      "method": "NeuralGreedy",
+      "run_id": 7,
+      "seed": 743
+    },
+    {
+      "dataset": "GrQc",
+      "method": "NeuralGreedy",
+      "run_id": 8,
+      "seed": 843
+    },
+    {
+      "dataset": "GrQc",
+      "method": "NeuralGreedy",
+      "run_id": 9,
+      "seed": 943
+    }
+  ],
+  "failures": [],
+  "saved_files": [
+    "/mnt/data/xinyu/Fast_bandit/results/baselines_new/MovieLens_EE-Net_regret.npy",
+    "/mnt/data/xinyu/Fast_bandit/results/baselines_new/MovieLens_EE-Net_time.npy",
+    "/mnt/data/xinyu/Fast_bandit/results/baselines_new/MovieLens_NeuralUCB_regret.npy",
+    "/mnt/data/xinyu/Fast_bandit/results/baselines_new/MovieLens_NeuralUCB_time.npy",
+    "/mnt/data/xinyu/Fast_bandit/results/baselines_new/MovieLens_NeuralTS_regret.npy",
+    "/mnt/data/xinyu/Fast_bandit/results/baselines_new/MovieLens_NeuralTS_time.npy",
+    "/mnt/data/xinyu/Fast_bandit/results/baselines_new/MovieLens_NeuralGreedy_regret.npy",
+    "/mnt/data/xinyu/Fast_bandit/results/baselines_new/MovieLens_NeuralGreedy_time.npy",
+    "/mnt/data/xinyu/Fast_bandit/results/baselines_new/Facebook_EE-Net_regret.npy",
+    "/mnt/data/xinyu/Fast_bandit/results/baselines_new/Facebook_EE-Net_time.npy",
+    "/mnt/data/xinyu/Fast_bandit/results/baselines_new/Facebook_NeuralUCB_regret.npy",
+    "/mnt/data/xinyu/Fast_bandit/results/baselines_new/Facebook_NeuralUCB_time.npy",
+    "/mnt/data/xinyu/Fast_bandit/results/baselines_new/Facebook_NeuralTS_regret.npy",
+    "/mnt/data/xinyu/Fast_bandit/results/baselines_new/Facebook_NeuralTS_time.npy",
+    "/mnt/data/xinyu/Fast_bandit/results/baselines_new/Facebook_NeuralGreedy_regret.npy",
+    "/mnt/data/xinyu/Fast_bandit/results/baselines_new/Facebook_NeuralGreedy_time.npy",
+    "/mnt/data/xinyu/Fast_bandit/results/baselines_new/GrQc_EE-Net_regret.npy",
+    "/mnt/data/xinyu/Fast_bandit/results/baselines_new/GrQc_EE-Net_time.npy",
+    "/mnt/data/xinyu/Fast_bandit/results/baselines_new/GrQc_NeuralUCB_regret.npy",
+    "/mnt/data/xinyu/Fast_bandit/results/baselines_new/GrQc_NeuralUCB_time.npy",
+    "/mnt/data/xinyu/Fast_bandit/results/baselines_new/GrQc_NeuralTS_regret.npy",
+    "/mnt/data/xinyu/Fast_bandit/results/baselines_new/GrQc_NeuralTS_time.npy",
+    "/mnt/data/xinyu/Fast_bandit/results/baselines_new/GrQc_NeuralGreedy_regret.npy",
+    "/mnt/data/xinyu/Fast_bandit/results/baselines_new/GrQc_NeuralGreedy_time.npy"
+  ],
+  "elapsed_seconds": 1459.5262508392334,
+  "created_at": "2026-05-06 02:33:42"
+}

@@ -1,0 +1,247 @@
+source,candidate_type,dataset,method,path,exists,shape,runs,T,alpha,param,notes
+final_plot_online.py,strong_data_candidate,MovieLens,FastPRB,results/online_link_prediction/MovieLens_FastPRB_alpha0.85_eps8.33e-05_T10000_lr10.0073_lr20.0004_202601252259/final_results.npy,True,10x10000x5,10,10000,0.85,eps8.33e-05,
+final_plot_online.py,strong_data_candidate,MovieLens,PRB,results/online_link_prediction/MovieLens_PRB_alpha0.85_powT50_T10000_lr10.0073_lr20.0004_202601252128/final_results.npy,True,10x10000x5,10,10000,0.85,powT50,
+final_plot_online.py,strong_data_candidate,Facebook,FastPRB,results/online_link_prediction/Facebook_FastPRB_alpha0.85_eps0.000248_T10000_lr10.06_lr20.02_202601261327/final_results.npy,True,10x10000x5,10,10000,0.85,eps0.000248,
+final_plot_online.py,strong_data_candidate,Facebook,PRB,results/online_link_prediction/Facebook_PRB_alpha0.85_powT50_T10000_lr10.06_lr20.02_202601252130/final_results.npy,True,10x10000x5,10,10000,0.85,powT50,
+final_plot_online.py,strong_data_candidate,Amazon,FastPRB,results/online_link_prediction/Amazon_fashion_FastPRB_alpha0.85_eps0.000125_T5000_lr10.1_lr20.01_202601261331/final_results.npy,True,10x5000x5,10,5000,0.85,eps0.000125,
+final_plot_online.py,strong_data_candidate,Amazon,PRB,results/online_link_prediction/Amazon_fashion_PRB_alpha0.85_powT50_T5000_lr10.1_lr20.01_202601261332/final_results.npy,True,10x5000x5,10,5000,0.85,powT50,
+final_plot_online.py,strong_data_candidate,GrQc,FastPRB,results/online_link_prediction/Grqc_FastPRB_alpha0.85_eps0.000191_T10000_lr10.01_lr20.004_202601261327/final_results.npy,True,10x10000x5,10,10000,0.85,eps0.000191,
+final_plot_online.py,strong_data_candidate,GrQc,PRB,results/online_link_prediction/Grqc_PRB_alpha0.85_powT50_T10000_lr10.01_lr20.004_202601252130/final_results.npy,True,10x10000x5,10,10000,0.85,powT50,
+final_plot_online.py,strong_data_candidate,Collab,FastPRB,results/online_link_prediction/Collab_FastPRB_alpha0.85_eps4.24e-06_T5000_lr10.01_lr20.004_202601242113/final_results.npy,True,10x5000x5,10,5000,0.85,eps4.24e-06,
+final_plot_online.py,strong_data_candidate,Collab,PRB,results/online_link_prediction/Collab_PRB_alpha0.85_powT50_T5000_lr10.01_lr20.004_202601250106/final_results.npy,True,10x5000x5,10,5000,0.85,powT50,
+final_plot_online.py,strong_data_candidate,PPA,FastPRB,results/online_link_prediction/PPA_FastPRB_alpha0.85_eps0.000191_T5000_lr10.01_lr20.004_202601250049/final_results.npy,True,10x5000x5,10,5000,0.85,eps0.000191,
+final_plot_online.py,strong_data_candidate,PPA,PRB,results/online_link_prediction/PPA_PRB_alpha0.85_powT50_T5000_lr10.01_lr20.004_202601211613/final_results.npy,True,3x5000x5,3,5000,0.85,powT50,
+final_plot_online.py,strong_data_candidate,Vessel,FastPRB,results/online_link_prediction/Vessel_FastPRB_alpha0.85_eps2.86e-07_T5000_lr10.01_lr20.004_202601242113/final_results.npy,True,10x5000x5,10,5000,0.85,eps2.86e-07,
+final_plot_online.py,strong_data_candidate,Vessel,PRB,results/online_link_prediction/Vessel_PRB_alpha0.85_powT50_T5000_lr10.01_lr20.004_202601242113/final_results.npy,False,,,5000,0.85,powT50,missing
+accuracy_plot.py,strong_data_candidate,MovieLens,FastPRB,results/online_link_prediction/MovieLens_FastPRB_alpha0.85_eps8.33e-05_T10000_lr10.0073_lr20.0004_202601291141/final_results.npy,True,10x10000x5,10,10000,0.85,eps8.33e-05,
+accuracy_plot.py,strong_data_candidate,MovieLens,PRB,results/online_link_prediction/MovieLens_PRB_alpha0.85_powT50_T10000_lr10.0073_lr20.0004_202601290025/final_results.npy,True,10x10000x5,10,10000,0.85,powT50,
+accuracy_plot.py,strong_data_candidate,Facebook,FastPRB,results/online_link_prediction/Facebook_FastPRB_alpha0.85_eps0.000248_T10000_lr10.06_lr20.02_202601291743/final_results.npy,True,10x10000x5,10,10000,0.85,eps0.000248,
+accuracy_plot.py,strong_data_candidate,Facebook,PRB,results/online_link_prediction/Facebook_PRB_alpha0.85_powT50_T10000_lr10.06_lr20.02_202601291452/final_results.npy,True,10x10000x5,10,10000,0.85,powT50,
+accuracy_plot.py,strong_data_candidate,Amazon,FastPRB,results/online_link_prediction/Amazon_fashion_FastPRB_alpha0.85_eps0.000125_T5000_lr10.1_lr20.01_202601291742/final_results.npy,True,10x5000x5,10,5000,0.85,eps0.000125,
+accuracy_plot.py,strong_data_candidate,Amazon,PRB,results/online_link_prediction/Amazon_fashion_PRB_alpha0.85_powT50_T5000_lr10.1_lr20.01_202601291452/final_results.npy,True,10x5000x5,10,5000,0.85,powT50,
+accuracy_plot.py,strong_data_candidate,GrQc,FastPRB,results/online_link_prediction/Grqc_FastPRB_alpha0.85_eps0.000191_T10000_lr10.01_lr20.004_202601291743/final_results.npy,True,10x10000x5,10,10000,0.85,eps0.000191,
+accuracy_plot.py,strong_data_candidate,GrQc,PRB,results/online_link_prediction/Grqc_PRB_alpha0.85_powT50_T10000_lr10.01_lr20.004_202601291452/final_results.npy,True,10x10000x5,10,10000,0.85,powT50,
+accuracy_plot.py,strong_data_candidate,Collab,FastPRB,results/online_link_prediction/Collab_FastPRB_alpha0.85_eps4.24e-06_T5000_lr10.01_lr20.004_202601291248/final_results.npy,True,10x5000x5,10,5000,0.85,eps4.24e-06,
+accuracy_plot.py,strong_data_candidate,Collab,PRB,results/online_link_prediction/Collab_PRB_alpha0.9_powT50_T5000_lr10.01_lr20.004_202601290042/final_results.npy,True,10x5000x5,10,5000,0.9,powT50,
+accuracy_plot.py,strong_data_candidate,PPA,FastPRB,results/online_link_prediction/PPA_FastPRB_alpha0.85_eps0.000191_T5000_lr10.01_lr20.004_202601250049/final_results.npy,True,10x5000x5,10,5000,0.85,eps0.000191,
+accuracy_plot.py,strong_data_candidate,PPA,PRB,results/online_link_prediction/PPA_PRB_alpha0.85_powT50_T5000_lr10.01_lr20.004_202601211613/final_results.npy,True,3x5000x5,3,5000,0.85,powT50,
+accuracy_plot.py,strong_data_candidate,Vessel,FastPRB,results/online_link_prediction/Vessel_FastPRB_alpha0.85_eps2.86e-07_T5000_lr10.01_lr20.004_202601242113/final_results.npy,True,10x5000x5,10,5000,0.85,eps2.86e-07,
+accuracy_plot.py,strong_data_candidate,Vessel,PRB,results/online_link_prediction/Vessel_PRB_alpha0.85_powT50_T5000_lr10.01_lr20.004_202601242113/final_results.npy,False,,,5000,0.85,powT50,missing
+results/online_link_prediction/plots,plot_candidate,MovieLens,,results/online_link_prediction/plots/202601290007_Batch_Output/MovieLens_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;23484 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-Collab,,results/online_link_prediction/plots/202601291148_Batch_Output/ogbl-Collab_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;26742 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-Collab,,results/online_link_prediction/plots/202601291149_Batch_Output/ogbl-Collab_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;25374 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-Collab,,results/online_link_prediction/plots/202601291150_Batch_Output/ogbl-Collab_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;26246 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-Collab,,results/online_link_prediction/plots/202601291151_Batch_Output/ogbl-Collab_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;26387 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-Collab,,results/online_link_prediction/plots/202601291152_Batch_Output/ogbl-Collab_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;25374 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-Collab,,results/online_link_prediction/plots/202601291228_Batch_Output/ogbl-Collab_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;26456 bytes
+results/online_link_prediction/plots,plot_candidate,MovieLens,,results/online_link_prediction/plots/202601291327_Batch_Output/MovieLens_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;23848 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-Collab,,results/online_link_prediction/plots/202601291330_Batch_Output/ogbl-Collab_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;26658 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-Collab,,results/online_link_prediction/plots/202601291432_Batch_Output/ogbl-Collab_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;33175 bytes
+results/online_link_prediction/plots,plot_candidate,AmazonFashion,,results/online_link_prediction/plots/202601291740_Batch_Output/AmazonFashion_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;22261 bytes
+results/online_link_prediction/plots,plot_candidate,Facebook,,results/online_link_prediction/plots/202601291740_Batch_Output/Facebook_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;33685 bytes
+results/online_link_prediction/plots,plot_candidate,GrQc,,results/online_link_prediction/plots/202601291740_Batch_Output/GrQc_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;26570 bytes
+results/online_link_prediction/plots,plot_candidate,AmazonFashion,,results/online_link_prediction/plots/202601291827_Batch_Output/AmazonFashion_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;22261 bytes
+results/online_link_prediction/plots,plot_candidate,Facebook,,results/online_link_prediction/plots/202601291827_Batch_Output/Facebook_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;33685 bytes
+results/online_link_prediction/plots,plot_candidate,GrQc,,results/online_link_prediction/plots/202601291827_Batch_Output/GrQc_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;26570 bytes
+results/online_link_prediction/plots,plot_candidate,MovieLens,,results/online_link_prediction/plots/202603230039_Batch_Output/MovieLens_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;32691 bytes
+results/online_link_prediction/plots,plot_candidate,MovieLens,,results/online_link_prediction/plots/202603231500_Batch_Output/MovieLens_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;57902 bytes
+results/online_link_prediction/plots,plot_candidate,MovieLens,,results/online_link_prediction/plots/202603231507_Batch_Output/MovieLens_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;23484 bytes
+results/online_link_prediction/plots,plot_candidate,MovieLens,,results/online_link_prediction/plots/202603231632_Batch_Output/MovieLens_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;31635 bytes
+results/online_link_prediction/plots,plot_candidate,MovieLens,,results/online_link_prediction/plots/202603252004_Batch_Output/MovieLens_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;18450 bytes
+results/online_link_prediction/plots,plot_candidate,MovieLens,,results/online_link_prediction/plots/202603252005_Batch_Output/MovieLens_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;16170 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-Collab,,results/online_link_prediction/plots/202603252007_Batch_Output/ogbl-Collab_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;20407 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-PPA,,results/online_link_prediction/plots/202603252010_Batch_Output/ogbl-PPA_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;19425 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-PPA,,results/online_link_prediction/plots/202603252011_Batch_Output/ogbl-PPA_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;18360 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-PPA,,results/online_link_prediction/plots/202603252012_Batch_Output/ogbl-PPA_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;15603 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-Vessel,,results/online_link_prediction/plots/202603252012_Batch_Output/ogbl-Vessel_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;14979 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-PPA,,results/online_link_prediction/plots/202603252013_Batch_Output/ogbl-PPA_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;19235 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-Vessel,,results/online_link_prediction/plots/202603252016_Batch_Output/ogbl-Vessel_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;16086 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-Collab,,results/online_link_prediction/plots/202603262125_Batch_Output/ogbl-Collab_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;30038 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-Collab,,results/online_link_prediction/plots/202603262207_Batch_Output/ogbl-Collab_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;30038 bytes
+results/online_link_prediction/plots,plot_candidate,MovieLens,,results/online_link_prediction/plots/202603262235_Batch_Output/MovieLens_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;21366 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-Collab,,results/online_link_prediction/plots/202603262240_Batch_Output/ogbl-Collab_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;30038 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-Collab,,results/online_link_prediction/plots/202603271142_Batch_Output/ogbl-Collab_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;30038 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-Collab,,results/online_link_prediction/plots/202603280031_Batch_Output/ogbl-Collab_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;17316 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-Collab,,results/online_link_prediction/plots/202603280032_Batch_Output/ogbl-Collab_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;17456 bytes
+results/online_link_prediction/plots,plot_candidate,MovieLens,,results/online_link_prediction/plots/202603301412_Batch_Output/MovieLens_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;16170 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-Collab,,results/online_link_prediction/plots/202603301412_Batch_Output/ogbl-Collab_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;20406 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-PPA,,results/online_link_prediction/plots/202603301412_Batch_Output/ogbl-PPA_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;16966 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-Collab,,results/online_link_prediction/plots/202603301429_Batch_Output/ogbl-Collab_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;35570 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-Collab,,results/online_link_prediction/plots/202603301520_Batch_Output/ogbl-Collab_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;16685 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-Collab,,results/online_link_prediction/plots/202603301521_Batch_Output/ogbl-Collab_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;16822 bytes
+results/online_link_prediction/plots,plot_candidate,MovieLens,,results/online_link_prediction/plots/202603301923_Batch_Output/MovieLens_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;16170 bytes
+results/online_link_prediction/plots,plot_candidate,MovieLens,,results/online_link_prediction/plots/202603301923_Batch_Output/MovieLens_Regret_vs_Time.pdf,True,,,,,,regret;time;28160 bytes
+results/online_link_prediction/plots,plot_candidate,MovieLens,,results/online_link_prediction/plots/202603301927_Batch_Output/MovieLens_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;16170 bytes
+results/online_link_prediction/plots,plot_candidate,MovieLens,,results/online_link_prediction/plots/202603301927_Batch_Output/MovieLens_Regret_vs_Time.pdf,True,,,,,,regret;time;28160 bytes
+results/online_link_prediction/plots,plot_candidate,MovieLens,,results/online_link_prediction/plots/202603301935_Batch_Output/MovieLens_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;15666 bytes
+results/online_link_prediction/plots,plot_candidate,MovieLens,,results/online_link_prediction/plots/202603301935_Batch_Output/MovieLens_Regret_vs_Time.pdf,True,,,,,,regret;time;33687 bytes
+results/online_link_prediction/plots,plot_candidate,MovieLens,,results/online_link_prediction/plots/202603301938_Batch_Output/MovieLens_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;16970 bytes
+results/online_link_prediction/plots,plot_candidate,MovieLens,,results/online_link_prediction/plots/202603301938_Batch_Output/MovieLens_Regret_vs_Time.pdf,True,,,,,,regret;time;28697 bytes
+results/online_link_prediction/plots,plot_candidate,MovieLens,,results/online_link_prediction/plots/202603301940_Batch_Output/MovieLens_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;19477 bytes
+results/online_link_prediction/plots,plot_candidate,MovieLens,,results/online_link_prediction/plots/202603301940_Batch_Output/MovieLens_Regret_vs_Time.pdf,True,,,,,,regret;time;27476 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-Collab,,results/online_link_prediction/plots/202603301941_Batch_Output/ogbl-Collab_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;20406 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-Collab,,results/online_link_prediction/plots/202603301943_Batch_Output/ogbl-Collab_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;21551 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-Collab,,results/online_link_prediction/plots/202603301943_Batch_Output/ogbl-Collab_Regret_vs_Time.pdf,True,,,,,,regret;time;20073 bytes
+results/online_link_prediction/plots,plot_candidate,MovieLens,,results/online_link_prediction/plots/202603301944_Batch_Output/MovieLens_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;15029 bytes
+results/online_link_prediction/plots,plot_candidate,MovieLens,,results/online_link_prediction/plots/202603301944_Batch_Output/MovieLens_Regret_vs_Time.pdf,True,,,,,,regret;time;20761 bytes
+results/online_link_prediction/plots,plot_candidate,MovieLens,,results/online_link_prediction/plots/202603301945_Batch_Output/MovieLens_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;16620 bytes
+results/online_link_prediction/plots,plot_candidate,MovieLens,,results/online_link_prediction/plots/202603301945_Batch_Output/MovieLens_Regret_vs_Time.pdf,True,,,,,,regret;time;19064 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-Collab,,results/online_link_prediction/plots/202603311319_Batch_Output/ogbl-Collab_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;30038 bytes
+results/online_link_prediction/plots,plot_candidate,AmazonFashion,,results/online_link_prediction/plots/202604051523_Batch_Output/AmazonFashion_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;16251 bytes
+results/online_link_prediction/plots,plot_candidate,Facebook,,results/online_link_prediction/plots/202604051523_Batch_Output/Facebook_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;17708 bytes
+results/online_link_prediction/plots,plot_candidate,GrQc,,results/online_link_prediction/plots/202604051523_Batch_Output/GrQc_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;16693 bytes
+results/online_link_prediction/plots,plot_candidate,MovieLens,,results/online_link_prediction/plots/202604051523_Batch_Output/MovieLens_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;15180 bytes
+results/online_link_prediction/plots,plot_candidate,AmazonFashion,,results/online_link_prediction/plots/202604051530_Batch_Output/AmazonFashion_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;19176 bytes
+results/online_link_prediction/plots,plot_candidate,Facebook,,results/online_link_prediction/plots/202604051530_Batch_Output/Facebook_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;24972 bytes
+results/online_link_prediction/plots,plot_candidate,GrQc,,results/online_link_prediction/plots/202604051530_Batch_Output/GrQc_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;20428 bytes
+results/online_link_prediction/plots,plot_candidate,MovieLens,,results/online_link_prediction/plots/202604051530_Batch_Output/MovieLens_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;22771 bytes
+results/online_link_prediction/plots,plot_candidate,AmazonFashion,,results/online_link_prediction/plots/202604051533_Batch_Output/AmazonFashion_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;19109 bytes
+results/online_link_prediction/plots,plot_candidate,Facebook,,results/online_link_prediction/plots/202604051533_Batch_Output/Facebook_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;24275 bytes
+results/online_link_prediction/plots,plot_candidate,GrQc,,results/online_link_prediction/plots/202604051533_Batch_Output/GrQc_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;20155 bytes
+results/online_link_prediction/plots,plot_candidate,MovieLens,,results/online_link_prediction/plots/202604051533_Batch_Output/MovieLens_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;22736 bytes
+results/online_link_prediction/plots,plot_candidate,MovieLens,,results/online_link_prediction/plots/202605071016_Batch_Output/MovieLens_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;23639 bytes
+results/online_link_prediction/plots,plot_candidate,MovieLens,,results/online_link_prediction/plots/202605071337_Batch_Output/MovieLens_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;23276 bytes
+results/online_link_prediction/plots,plot_candidate,MovieLens,,results/online_link_prediction/plots/202605110941_Batch_Output/MovieLens_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;33418 bytes
+results/online_link_prediction/plots,plot_candidate,MovieLens,,results/online_link_prediction/plots/202605111113_Batch_Output/MovieLens_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;40495 bytes
+results/online_link_prediction/plots,plot_candidate,MovieLens,,results/online_link_prediction/plots/202605111509_Batch_Output/MovieLens_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;49886 bytes
+results/online_link_prediction/plots,plot_candidate,MovieLens,,results/online_link_prediction/plots/202605111638_Batch_Output/MovieLens_Regret_vs_Rounds.pdf,True,,,,,,regret;rounds;24232 bytes
+results/online_link_prediction/plots,plot_candidate,MovieLens,,results/online_link_prediction/plots/MovieLens_Regret_vs_Rounds_202601270043.pdf,True,,,,,,regret;rounds;24075 bytes
+results/online_link_prediction/plots,plot_candidate,MovieLens,,results/online_link_prediction/plots/MovieLens_Regret_vs_Rounds_202601272100.pdf,True,,,,,,regret;rounds;24865 bytes
+results/online_link_prediction/plots,plot_candidate,MovieLens,,results/online_link_prediction/plots/MovieLens_Regret_vs_Rounds_202601281505.pdf,True,,,,,,regret;rounds;24409 bytes
+results/online_link_prediction/plots,plot_candidate,MovieLens,,results/online_link_prediction/plots/MovieLens_Regret_vs_Rounds_202601281519.pdf,True,,,,,,regret;rounds;59900 bytes
+results/online_link_prediction/plots,plot_candidate,MovieLens,,results/online_link_prediction/plots/MovieLens_Regret_vs_Rounds_202601281520.pdf,True,,,,,,regret;rounds;24409 bytes
+results/online_link_prediction/plots,plot_candidate,MovieLens,,results/online_link_prediction/plots/MovieLens_Regret_vs_Rounds_202601281522.pdf,True,,,,,,regret;rounds;24409 bytes
+results/online_link_prediction/plots,plot_candidate,MovieLens,,results/online_link_prediction/plots/MovieLens_Regret_vs_Rounds_202601281524.pdf,True,,,,,,regret;rounds;24409 bytes
+results/online_link_prediction/plots,plot_candidate,MovieLens,,results/online_link_prediction/plots/MovieLens_Regret_vs_Rounds_202601281535.pdf,True,,,,,,regret;rounds;24409 bytes
+results/online_link_prediction/plots,plot_candidate,MovieLens,,results/online_link_prediction/plots/MovieLens_Regret_vs_Rounds_202601281608.pdf,True,,,,,,regret;rounds;32646 bytes
+results/online_link_prediction/plots,plot_candidate,MovieLens,,results/online_link_prediction/plots/MovieLens_Regret_vs_Rounds_202601281609.pdf,True,,,,,,regret;rounds;32940 bytes
+results/online_link_prediction/plots,plot_candidate,MovieLens,,results/online_link_prediction/plots/MovieLens_Regret_vs_Rounds_202601281631.pdf,True,,,,,,regret;rounds;26119 bytes
+results/online_link_prediction/plots,plot_candidate,MovieLens,,results/online_link_prediction/plots/MovieLens_Regret_vs_Rounds_202601282332.pdf,True,,,,,,regret;rounds;20407 bytes
+results/online_link_prediction/plots,plot_candidate,MovieLens,,results/online_link_prediction/plots/MovieLens_Regret_vs_Time_202601270043.pdf,True,,,,,,regret;time;35544 bytes
+results/online_link_prediction/plots,plot_candidate,MovieLens,,results/online_link_prediction/plots/MovieLens_Regret_vs_Time_202601272100.pdf,True,,,,,,regret;time;36143 bytes
+results/online_link_prediction/plots,plot_candidate,MovieLens,,results/online_link_prediction/plots/MovieLens_Regret_vs_Time_202601281505.pdf,True,,,,,,regret;time;25007 bytes
+results/online_link_prediction/plots,plot_candidate,MovieLens,,results/online_link_prediction/plots/MovieLens_Regret_vs_Time_202601281519.pdf,True,,,,,,regret;time;60498 bytes
+results/online_link_prediction/plots,plot_candidate,MovieLens,,results/online_link_prediction/plots/MovieLens_Regret_vs_Time_202601281520.pdf,True,,,,,,regret;time;25007 bytes
+results/online_link_prediction/plots,plot_candidate,MovieLens,,results/online_link_prediction/plots/MovieLens_Regret_vs_Time_202601281522.pdf,True,,,,,,regret;time;34557 bytes
+results/online_link_prediction/plots,plot_candidate,MovieLens,,results/online_link_prediction/plots/MovieLens_Regret_vs_Time_202601281524.pdf,True,,,,,,regret;time;35683 bytes
+results/online_link_prediction/plots,plot_candidate,MovieLens,,results/online_link_prediction/plots/MovieLens_Regret_vs_Time_202601281535.pdf,True,,,,,,regret;time;35681 bytes
+results/online_link_prediction/plots,plot_candidate,MovieLens,,results/online_link_prediction/plots/MovieLens_Regret_vs_Time_202601281608.pdf,True,,,,,,regret;time;77480 bytes
+results/online_link_prediction/plots,plot_candidate,MovieLens,,results/online_link_prediction/plots/MovieLens_Regret_vs_Time_202601281609.pdf,True,,,,,,regret;time;84859 bytes
+results/online_link_prediction/plots,plot_candidate,MovieLens,,results/online_link_prediction/plots/MovieLens_Regret_vs_Time_202601281631.pdf,True,,,,,,regret;time;96173 bytes
+results/online_link_prediction/plots,plot_candidate,MovieLens,,results/online_link_prediction/plots/MovieLens_Regret_vs_Time_202601282332.pdf,True,,,,,,regret;time;34479 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-Collab,,results/online_link_prediction/plots/ogbl-Collab_Regret_vs_Rounds_202601270016.pdf,True,,,,,,regret;rounds;20647 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-Collab,,results/online_link_prediction/plots/ogbl-Collab_Regret_vs_Rounds_202601270025.pdf,True,,,,,,regret;rounds;20647 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-Collab,,results/online_link_prediction/plots/ogbl-Collab_Regret_vs_Rounds_202601281530.pdf,True,,,,,,regret;rounds;20198 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-Collab,,results/online_link_prediction/plots/ogbl-Collab_Regret_vs_Time_202601270016.pdf,True,,,,,,regret;time;27151 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-Collab,,results/online_link_prediction/plots/ogbl-Collab_Regret_vs_Time_202601270025.pdf,True,,,,,,regret;time;27151 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-Collab,,results/online_link_prediction/plots/ogbl-Collab_Regret_vs_Time_202601281530.pdf,True,,,,,,regret;time;26704 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-PPA,,results/online_link_prediction/plots/ogbl-PPA_Regret_vs_Rounds_202601270034.pdf,True,,,,,,regret;rounds;21876 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-PPA,,results/online_link_prediction/plots/ogbl-PPA_Regret_vs_Rounds_202601281540.pdf,True,,,,,,regret;rounds;21432 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-PPA,,results/online_link_prediction/plots/ogbl-PPA_Regret_vs_Time_202601270034.pdf,True,,,,,,regret;time;20686 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-PPA,,results/online_link_prediction/plots/ogbl-PPA_Regret_vs_Time_202601281540.pdf,True,,,,,,regret;time;20236 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-Vessel,,results/online_link_prediction/plots/ogbl-Vessel_Regret_vs_Rounds_202601262359.pdf,True,,,,,,regret;rounds;21772 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-Vessel,,results/online_link_prediction/plots/ogbl-Vessel_Regret_vs_Rounds_202601270000.pdf,True,,,,,,regret;rounds;41163 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-Vessel,,results/online_link_prediction/plots/ogbl-Vessel_Regret_vs_Rounds_202601270006.pdf,True,,,,,,regret;rounds;41164 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-Vessel,,results/online_link_prediction/plots/ogbl-Vessel_Regret_vs_Rounds_202601270012.pdf,True,,,,,,regret;rounds;41039 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-Vessel,,results/online_link_prediction/plots/ogbl-Vessel_Regret_vs_Rounds_202601272057.pdf,True,,,,,,regret;rounds;17119 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-Vessel,,results/online_link_prediction/plots/ogbl-Vessel_Regret_vs_Rounds_202601281547.pdf,True,,,,,,regret;rounds;23807 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-Vessel,,results/online_link_prediction/plots/ogbl-Vessel_Regret_vs_Rounds_202601281549.pdf,True,,,,,,regret;rounds;16671 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-Vessel,,results/online_link_prediction/plots/ogbl-Vessel_Regret_vs_Time_202601262359.pdf,True,,,,,,regret;time;25264 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-Vessel,,results/online_link_prediction/plots/ogbl-Vessel_Regret_vs_Time_202601270000.pdf,True,,,,,,regret;time;43012 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-Vessel,,results/online_link_prediction/plots/ogbl-Vessel_Regret_vs_Time_202601270006.pdf,True,,,,,,regret;time;43013 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-Vessel,,results/online_link_prediction/plots/ogbl-Vessel_Regret_vs_Time_202601270012.pdf,True,,,,,,regret;time;42888 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-Vessel,,results/online_link_prediction/plots/ogbl-Vessel_Regret_vs_Time_202601272057.pdf,True,,,,,,regret;time;19414 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-Vessel,,results/online_link_prediction/plots/ogbl-Vessel_Regret_vs_Time_202601281547.pdf,True,,,,,,regret;time;31255 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-Vessel,,results/online_link_prediction/plots/ogbl-Vessel_Regret_vs_Time_202601281549.pdf,True,,,,,,regret;time;18966 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-collab,,results/online_link_prediction/plots/ogbl-collab_Regret_vs_Rounds_202601241220.pdf,True,,,,,,regret;rounds;23772 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-collab,,results/online_link_prediction/plots/ogbl-collab_Regret_vs_Rounds_202601251248.pdf,True,,,,,,regret;rounds;23772 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-collab,,results/online_link_prediction/plots/ogbl-collab_Regret_vs_Rounds_202601262335.pdf,True,,,,,,regret;rounds;37411 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-collab,,results/online_link_prediction/plots/ogbl-collab_Regret_vs_Time_202601241220.pdf,True,,,,,,regret;time;28179 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-collab,,results/online_link_prediction/plots/ogbl-collab_Regret_vs_Time_202601251248.pdf,True,,,,,,regret;time;28089 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-collab,,results/online_link_prediction/plots/ogbl-collab_Regret_vs_Time_202601262335.pdf,True,,,,,,regret;time;50237 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-ppa,,results/online_link_prediction/plots/ogbl-ppa_Regret_vs_Rounds_202601251248.pdf,True,,,,,,regret;rounds;22514 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-ppa,,results/online_link_prediction/plots/ogbl-ppa_Regret_vs_Rounds_202601262337.pdf,True,,,,,,regret;rounds;31863 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-ppa,,results/online_link_prediction/plots/ogbl-ppa_Regret_vs_Time_202601251248.pdf,True,,,,,,regret;time;25725 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-ppa,,results/online_link_prediction/plots/ogbl-ppa_Regret_vs_Time_202601262337.pdf,True,,,,,,regret;time;33694 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-vessel,,results/online_link_prediction/plots/ogbl-vessel_Regret_vs_Rounds_202601251248.pdf,True,,,,,,regret;rounds;29425 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-vessel,,results/online_link_prediction/plots/ogbl-vessel_Regret_vs_Rounds_202601262338.pdf,True,,,,,,regret;rounds;23267 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-vessel,,results/online_link_prediction/plots/ogbl-vessel_Regret_vs_Time_202601251248.pdf,True,,,,,,regret;time;33786 bytes
+results/online_link_prediction/plots,plot_candidate,ogbl-vessel,,results/online_link_prediction/plots/ogbl-vessel_Regret_vs_Time_202601262338.pdf,True,,,,,,regret;time;26382 bytes
+results/plots,plot_candidate,AmazonFashion,,results/plots/AmazonFashion_Regret_vs_Rounds_202601212240.pdf,True,,,,,,regret;rounds;27134 bytes
+results/plots,plot_candidate,AmazonFashion,,results/plots/AmazonFashion_Regret_vs_Time_202601212240.pdf,True,,,,,,regret;time;29000 bytes
+results/plots,plot_candidate,Amazon_fashion,,results/plots/Amazon_fashion_Regret_vs_Rounds_202601201108.pdf,True,,,,,,regret;rounds;199879 bytes
+results/plots,plot_candidate,Amazon_fashion,,results/plots/Amazon_fashion_Regret_vs_Rounds_202601210956.pdf,True,,,,,,regret;rounds;375374 bytes
+results/plots,plot_candidate,Amazon_fashion,,results/plots/Amazon_fashion_Regret_vs_Time_202601201108.pdf,True,,,,,,regret;time;202174 bytes
+results/plots,plot_candidate,Amazon_fashion,,results/plots/Amazon_fashion_Regret_vs_Time_202601210956.pdf,True,,,,,,regret;time;379627 bytes
+results/plots,plot_candidate,Citation2,,results/plots/Citation2_Regret_vs_Rounds_202601212212.pdf,True,,,,,,regret;rounds;121670 bytes
+results/plots,plot_candidate,Citation2,,results/plots/Citation2_Regret_vs_Time_202601212212.pdf,True,,,,,,regret;time;122921 bytes
+results/plots,plot_candidate,Collab,,results/plots/Collab_Regret_vs_Rounds_202601211614.pdf,True,,,,,,regret;rounds;121229 bytes
+results/plots,plot_candidate,Collab,,results/plots/Collab_Regret_vs_Rounds_202601212212.pdf,True,,,,,,regret;rounds;313226 bytes
+results/plots,plot_candidate,Collab,,results/plots/Collab_Regret_vs_Time_202601211614.pdf,True,,,,,,regret;time;121488 bytes
+results/plots,plot_candidate,Collab,,results/plots/Collab_Regret_vs_Time_202601212212.pdf,True,,,,,,regret;time;318140 bytes
+results/plots,plot_candidate,Facebook,,results/plots/Facebook_Regret_vs_Rounds_202601201108.pdf,True,,,,,,regret;rounds;366930 bytes
+results/plots,plot_candidate,Facebook,,results/plots/Facebook_Regret_vs_Rounds_202601202130.pdf,True,,,,,,regret;rounds;727174 bytes
+results/plots,plot_candidate,Facebook,,results/plots/Facebook_Regret_vs_Rounds_202601210956.pdf,True,,,,,,regret;rounds;1086803 bytes
+results/plots,plot_candidate,Facebook,,results/plots/Facebook_Regret_vs_Rounds_202601211614.pdf,True,,,,,,regret;rounds;1443644 bytes
+results/plots,plot_candidate,Facebook,,results/plots/Facebook_Regret_vs_Rounds_202601212211.pdf,True,,,,,,regret;rounds;1283152 bytes
+results/plots,plot_candidate,Facebook,,results/plots/Facebook_Regret_vs_Rounds_202601212240.pdf,True,,,,,,regret;rounds;20461 bytes
+results/plots,plot_candidate,Facebook,,results/plots/Facebook_Regret_vs_Rounds_202601212249.pdf,True,,,,,,regret;rounds;24444 bytes
+results/plots,plot_candidate,Facebook,,results/plots/Facebook_Regret_vs_Time_202601201108.pdf,True,,,,,,regret;time;365739 bytes
+results/plots,plot_candidate,Facebook,,results/plots/Facebook_Regret_vs_Time_202601202130.pdf,True,,,,,,regret;time;725705 bytes
+results/plots,plot_candidate,Facebook,,results/plots/Facebook_Regret_vs_Time_202601210956.pdf,True,,,,,,regret;time;1087755 bytes
+results/plots,plot_candidate,Facebook,,results/plots/Facebook_Regret_vs_Time_202601211614.pdf,True,,,,,,regret;time;1437722 bytes
+results/plots,plot_candidate,Facebook,,results/plots/Facebook_Regret_vs_Time_202601212211.pdf,True,,,,,,regret;time;1277377 bytes
+results/plots,plot_candidate,Facebook,,results/plots/Facebook_Regret_vs_Time_202601212240.pdf,True,,,,,,regret;time;21156 bytes
+results/plots,plot_candidate,Facebook,,results/plots/Facebook_Regret_vs_Time_202601212249.pdf,True,,,,,,regret;time;28127 bytes
+results/plots,plot_candidate,Grqc,,results/plots/Grqc_Regret_vs_Rounds_202601201108.pdf,True,,,,,,regret;rounds;391795 bytes
+results/plots,plot_candidate,Grqc,,results/plots/Grqc_Regret_vs_Rounds_202601202133.pdf,True,,,,,,regret;rounds;391795 bytes
+results/plots,plot_candidate,Grqc,,results/plots/Grqc_Regret_vs_Rounds_202601210956.pdf,True,,,,,,regret;rounds;763431 bytes
+results/plots,plot_candidate,Grqc,,results/plots/Grqc_Regret_vs_Rounds_202601212240.pdf,True,,,,,,regret;rounds;26181 bytes
+results/plots,plot_candidate,Grqc,,results/plots/Grqc_Regret_vs_Rounds_202601212249.pdf,True,,,,,,regret;rounds;23192 bytes
+results/plots,plot_candidate,Grqc,,results/plots/Grqc_Regret_vs_Time_202601201108.pdf,True,,,,,,regret;time;391762 bytes
+results/plots,plot_candidate,Grqc,,results/plots/Grqc_Regret_vs_Time_202601202133.pdf,True,,,,,,regret;time;391762 bytes
+results/plots,plot_candidate,Grqc,,results/plots/Grqc_Regret_vs_Time_202601210956.pdf,True,,,,,,regret;time;763420 bytes
+results/plots,plot_candidate,Grqc,,results/plots/Grqc_Regret_vs_Time_202601212240.pdf,True,,,,,,regret;time;31610 bytes
+results/plots,plot_candidate,Grqc,,results/plots/Grqc_Regret_vs_Time_202601212249.pdf,True,,,,,,regret;time;26857 bytes
+results/plots,plot_candidate,MovieLens,,results/plots/MovieLens_Regret_vs_Rounds_202601201108.pdf,True,,,,,,regret;rounds;344749 bytes
+results/plots,plot_candidate,MovieLens,,results/plots/MovieLens_Regret_vs_Rounds_202601202122.pdf,True,,,,,,regret;rounds;933102 bytes
+results/plots,plot_candidate,MovieLens,,results/plots/MovieLens_Regret_vs_Rounds_202601210956.pdf,True,,,,,,regret;rounds;1427879 bytes
+results/plots,plot_candidate,MovieLens,,results/plots/MovieLens_Regret_vs_Rounds_202601212240.pdf,True,,,,,,regret;rounds;28918 bytes
+results/plots,plot_candidate,MovieLens,,results/plots/MovieLens_Regret_vs_Time_202601201108.pdf,True,,,,,,regret;time;338445 bytes
+results/plots,plot_candidate,MovieLens,,results/plots/MovieLens_Regret_vs_Time_202601202122.pdf,True,,,,,,regret;time;951046 bytes
+results/plots,plot_candidate,MovieLens,,results/plots/MovieLens_Regret_vs_Time_202601210956.pdf,True,,,,,,regret;time;1427877 bytes
+results/plots,plot_candidate,MovieLens,,results/plots/MovieLens_Regret_vs_Time_202601212240.pdf,True,,,,,,regret;time;37958 bytes
+results/plots,plot_candidate,PPA,,results/plots/PPA_Regret_vs_Rounds_202601212212.pdf,True,,,,,,regret;rounds;120876 bytes
+results/plots,plot_candidate,PPA,,results/plots/PPA_Regret_vs_Time_202601212212.pdf,True,,,,,,regret;time;125103 bytes
+results/plots,plot_candidate,Vessel,,results/plots/Vessel_Regret_vs_Rounds_202601212212.pdf,True,,,,,,regret;rounds;215533 bytes
+results/plots,plot_candidate,Vessel,,results/plots/Vessel_Regret_vs_Time_202601212212.pdf,True,,,,,,regret;time;220392 bytes
+results/plots,plot_candidate,AmazonFashion,,results/plots/custom_plots_acc/AmazonFashion_Accuracy_vs_Time.pdf,True,,,,,,accuracy;time;17251 bytes
+results/plots,plot_candidate,AmazonFashion,,results/plots/custom_plots_acc/AmazonFashion_Accuracy_vs_Time_Wide.pdf,True,,,,,,accuracy;time;17952 bytes
+results/plots,plot_candidate,Facebook,,results/plots/custom_plots_acc/Facebook_Accuracy_vs_Time.pdf,True,,,,,,accuracy;time;18048 bytes
+results/plots,plot_candidate,Facebook,,results/plots/custom_plots_acc/Facebook_Accuracy_vs_Time_Wide.pdf,True,,,,,,accuracy;time;18214 bytes
+results/plots,plot_candidate,GrQc,,results/plots/custom_plots_acc/GrQc_Accuracy_vs_Time.pdf,True,,,,,,accuracy;time;17687 bytes
+results/plots,plot_candidate,GrQc,,results/plots/custom_plots_acc/GrQc_Accuracy_vs_Time_Wide.pdf,True,,,,,,accuracy;time;17807 bytes
+results/plots,plot_candidate,MovieLens,,results/plots/custom_plots_acc/MovieLens_Accuracy_vs_Time.pdf,True,,,,,,accuracy;time;17575 bytes
+results/plots,plot_candidate,MovieLens,,results/plots/custom_plots_acc/MovieLens_Accuracy_vs_Time_Wide.pdf,True,,,,,,accuracy;time;18956 bytes
+results/plots,plot_candidate,ogbl-Collab,,results/plots/custom_plots_acc/ogbl-Collab_Accuracy_vs_Time.pdf,True,,,,,,accuracy;time;17876 bytes
+results/plots,plot_candidate,ogbl-Collab,,results/plots/custom_plots_acc/ogbl-Collab_Accuracy_vs_Time_Wide.pdf,True,,,,,,accuracy;time;18387 bytes
+results/plots,plot_candidate,ogbl-citation2,,results/plots/ogbl-citation2_Regret_vs_Rounds_202601212240.pdf,True,,,,,,regret;rounds;22854 bytes
+results/plots,plot_candidate,ogbl-citation2,,results/plots/ogbl-citation2_Regret_vs_Rounds_202601221341.pdf,True,,,,,,regret;rounds;27343 bytes
+results/plots,plot_candidate,ogbl-citation2,,results/plots/ogbl-citation2_Regret_vs_Time_202601212240.pdf,True,,,,,,regret;time;24543 bytes
+results/plots,plot_candidate,ogbl-citation2,,results/plots/ogbl-citation2_Regret_vs_Time_202601221341.pdf,True,,,,,,regret;time;25973 bytes
+results/plots,plot_candidate,ogbl-collab,,results/plots/ogbl-collab_Regret_vs_Rounds_202601212240.pdf,True,,,,,,regret;rounds;24926 bytes
+results/plots,plot_candidate,ogbl-collab,,results/plots/ogbl-collab_Regret_vs_Rounds_202601221341.pdf,True,,,,,,regret;rounds;24926 bytes
+results/plots,plot_candidate,ogbl-collab,,results/plots/ogbl-collab_Regret_vs_Time_202601212240.pdf,True,,,,,,regret;time;26306 bytes
+results/plots,plot_candidate,ogbl-collab,,results/plots/ogbl-collab_Regret_vs_Time_202601221341.pdf,True,,,,,,regret;time;26306 bytes
+results/plots,plot_candidate,ogbl-ppa,,results/plots/ogbl-ppa_Regret_vs_Rounds_202601212240.pdf,True,,,,,,regret;rounds;21227 bytes
+results/plots,plot_candidate,ogbl-ppa,,results/plots/ogbl-ppa_Regret_vs_Rounds_202601221341.pdf,True,,,,,,regret;rounds;25534 bytes
+results/plots,plot_candidate,ogbl-ppa,,results/plots/ogbl-ppa_Regret_vs_Rounds_202601262340.pdf,True,,,,,,regret;rounds;19996 bytes
+results/plots,plot_candidate,ogbl-ppa,,results/plots/ogbl-ppa_Regret_vs_Time_202601212240.pdf,True,,,,,,regret;time;25876 bytes
+results/plots,plot_candidate,ogbl-ppa,,results/plots/ogbl-ppa_Regret_vs_Time_202601221341.pdf,True,,,,,,regret;time;27769 bytes
+results/plots,plot_candidate,ogbl-ppa,,results/plots/ogbl-ppa_Regret_vs_Time_202601262340.pdf,True,,,,,,regret;time;24915 bytes
+results/plots,plot_candidate,ogbl-vessel,,results/plots/ogbl-vessel_Regret_vs_Rounds_202601212240.pdf,True,,,,,,regret;rounds;20913 bytes
+results/plots,plot_candidate,ogbl-vessel,,results/plots/ogbl-vessel_Regret_vs_Rounds_202601221341.pdf,True,,,,,,regret;rounds;20913 bytes
+results/plots,plot_candidate,ogbl-vessel,,results/plots/ogbl-vessel_Regret_vs_Rounds_202601262340.pdf,True,,,,,,regret;rounds;19682 bytes
+results/plots,plot_candidate,ogbl-vessel,,results/plots/ogbl-vessel_Regret_vs_Time_202601212240.pdf,True,,,,,,regret;time;26922 bytes
+results/plots,plot_candidate,ogbl-vessel,,results/plots/ogbl-vessel_Regret_vs_Time_202601221341.pdf,True,,,,,,regret;time;26922 bytes
+results/plots,plot_candidate,ogbl-vessel,,results/plots/ogbl-vessel_Regret_vs_Time_202601262340.pdf,True,,,,,,regret;time;25955 bytes

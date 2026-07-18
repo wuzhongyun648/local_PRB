@@ -1,0 +1,13 @@
+graph_name: MovieLens
+method: FastPRB
+alpha: 0.85
+appr_eps: 8.33e-05
+power_T: None
+T: 500
+lr1: 0.0073
+lr2: 0.0004
+if_save: False
+workers: 1
+runs: 1
+seed: 0
+init_edges: None

@@ -1,0 +1,13 @@
+graph_name: Amazon_fashion
+method: FastPRB
+alpha: 0.85
+appr_eps: 0.000125
+power_T: None
+T: 5000
+lr1: 0.1
+lr2: 0.01
+if_save: False
+workers: 10
+runs: 10
+seed: 0
+init_edges: None

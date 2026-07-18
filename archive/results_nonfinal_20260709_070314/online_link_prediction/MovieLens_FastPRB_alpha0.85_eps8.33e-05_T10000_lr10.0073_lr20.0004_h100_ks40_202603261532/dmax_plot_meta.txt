@@ -1,0 +1,5 @@
+graph_name=MovieLens
+paper_n=12000
+runs_used=10
+T=10000
+band=mean ± sqrt(sample variance) per round across runs

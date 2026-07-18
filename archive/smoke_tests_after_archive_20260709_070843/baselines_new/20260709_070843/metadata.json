@@ -1,0 +1,47 @@
+{
+  "run_name": "20260709_070843",
+  "save_dir": "/mnt/data/xinyu/Fast_bandit/results/baselines_new/20260709_070843",
+  "args": {
+    "datasets": [
+      "MovieLens"
+    ],
+    "methods": [
+      "EE-Net"
+    ],
+    "T": 1,
+    "lamdba": 0.1,
+    "nu": 0.001,
+    "lr1": 0.1,
+    "lr2": 0.01,
+    "runs": 1,
+    "workers": 1
+  },
+  "datasets": [
+    "MovieLens"
+  ],
+  "methods": [
+    "EE-Net"
+  ],
+  "runs": 1,
+  "workers": 1,
+  "train_schedule": {
+    "before_2000": "every 50 rounds",
+    "from_2000": "every 100 rounds"
+  },
+  "seed_rule": "seed = run_id * 100 + 43",
+  "successes": [
+    {
+      "dataset": "MovieLens",
+      "method": "EE-Net",
+      "run_id": 0,
+      "seed": 43
+    }
+  ],
+  "failures": [],
+  "saved_files": [
+    "/mnt/data/xinyu/Fast_bandit/results/baselines_new/20260709_070843/MovieLens_EE-Net_regret.npy",
+    "/mnt/data/xinyu/Fast_bandit/results/baselines_new/20260709_070843/MovieLens_EE-Net_time.npy"
+  ],
+  "elapsed_seconds": 6.565233469009399,
+  "created_at": "2026-07-09 07:08:43"
+}

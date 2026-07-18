@@ -1,0 +1,128 @@
+nohup: ignoring input
+Data Source: /mnt/data/xinyu/bandits_pj/PRB/online_link_prediction/data
+=== Starting Parallel Baselines ===
+Datasets: ['Amazon']
+Methods:  ['EE-Net', 'Neural_epsilon', 'NeuralUCB', 'NeuralTS']
+Total Tasks: 20
+Workers: 20
+==================================================
+/mnt/data/xinyu/bandits_pj/PRB/.venv/lib/python3.10/site-packages/outdated/__init__.py:36: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import parse_version
+/mnt/data/xinyu/bandits_pj/PRB/.venv/lib/python3.10/site-packages/outdated/__init__.py:36: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import parse_version
+/mnt/data/xinyu/bandits_pj/PRB/.venv/lib/python3.10/site-packages/outdated/__init__.py:36: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import parse_version
+/mnt/data/xinyu/bandits_pj/PRB/.venv/lib/python3.10/site-packages/outdated/__init__.py:36: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import parse_version
+/mnt/data/xinyu/bandits_pj/PRB/.venv/lib/python3.10/site-packages/outdated/__init__.py:36: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import parse_version
+/mnt/data/xinyu/bandits_pj/PRB/.venv/lib/python3.10/site-packages/outdated/__init__.py:36: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import parse_version
+/mnt/data/xinyu/bandits_pj/PRB/.venv/lib/python3.10/site-packages/outdated/__init__.py:36: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import parse_version
+/mnt/data/xinyu/bandits_pj/PRB/.venv/lib/python3.10/site-packages/outdated/__init__.py:36: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import parse_version
+/mnt/data/xinyu/bandits_pj/PRB/.venv/lib/python3.10/site-packages/outdated/__init__.py:36: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import parse_version
+/mnt/data/xinyu/bandits_pj/PRB/.venv/lib/python3.10/site-packages/outdated/__init__.py:36: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import parse_version
+/mnt/data/xinyu/bandits_pj/PRB/.venv/lib/python3.10/site-packages/outdated/__init__.py:36: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import parse_version
+/mnt/data/xinyu/bandits_pj/PRB/.venv/lib/python3.10/site-packages/outdated/__init__.py:36: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import parse_version
+/mnt/data/xinyu/bandits_pj/PRB/.venv/lib/python3.10/site-packages/outdated/__init__.py:36: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import parse_version
+/mnt/data/xinyu/bandits_pj/PRB/.venv/lib/python3.10/site-packages/outdated/__init__.py:36: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import parse_version
+/mnt/data/xinyu/bandits_pj/PRB/.venv/lib/python3.10/site-packages/outdated/__init__.py:36: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import parse_version
+/mnt/data/xinyu/bandits_pj/PRB/.venv/lib/python3.10/site-packages/outdated/__init__.py:36: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import parse_version
+/mnt/data/xinyu/bandits_pj/PRB/.venv/lib/python3.10/site-packages/outdated/__init__.py:36: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import parse_version
+/mnt/data/xinyu/bandits_pj/PRB/.venv/lib/python3.10/site-packages/outdated/__init__.py:36: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import parse_version
+/mnt/data/xinyu/bandits_pj/PRB/.venv/lib/python3.10/site-packages/outdated/__init__.py:36: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import parse_version
+/mnt/data/xinyu/bandits_pj/PRB/.venv/lib/python3.10/site-packages/outdated/__init__.py:36: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import parse_version
+/mnt/data/xinyu/bandits_pj/PRB/.venv/lib/python3.10/site-packages/outdated/__init__.py:36: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import parse_version
+/mnt/data/xinyu/bandits_pj/PRB/baselines/NeuralTS.py:74: UserWarning: The use of `x.T` on tensors of dimension other than 2 to reverse their shape is deprecated and it will throw an error in a future release. Consider `x.mT` to transpose batches of matrices or `x.permute(*torch.arange(x.ndim - 1, -1, -1))` to reverse the dimensions of a tensor. (Triggered internally at /pytorch/aten/src/ATen/native/TensorShape.cpp:4416.)
+  self.Design+=torch.matmul(g,g.T).to(device)
+/mnt/data/xinyu/bandits_pj/PRB/baselines/NeuralTS.py:74: UserWarning: The use of `x.T` on tensors of dimension other than 2 to reverse their shape is deprecated and it will throw an error in a future release. Consider `x.mT` to transpose batches of matrices or `x.permute(*torch.arange(x.ndim - 1, -1, -1))` to reverse the dimensions of a tensor. (Triggered internally at /pytorch/aten/src/ATen/native/TensorShape.cpp:4416.)
+  self.Design+=torch.matmul(g,g.T).to(device)
+/mnt/data/xinyu/bandits_pj/PRB/baselines/NeuralTS.py:74: UserWarning: The use of `x.T` on tensors of dimension other than 2 to reverse their shape is deprecated and it will throw an error in a future release. Consider `x.mT` to transpose batches of matrices or `x.permute(*torch.arange(x.ndim - 1, -1, -1))` to reverse the dimensions of a tensor. (Triggered internally at /pytorch/aten/src/ATen/native/TensorShape.cpp:4416.)
+  self.Design+=torch.matmul(g,g.T).to(device)
+/mnt/data/xinyu/bandits_pj/PRB/baselines/NeuralTS.py:74: UserWarning: The use of `x.T` on tensors of dimension other than 2 to reverse their shape is deprecated and it will throw an error in a future release. Consider `x.mT` to transpose batches of matrices or `x.permute(*torch.arange(x.ndim - 1, -1, -1))` to reverse the dimensions of a tensor. (Triggered internally at /pytorch/aten/src/ATen/native/TensorShape.cpp:4416.)
+  self.Design+=torch.matmul(g,g.T).to(device)
+/mnt/data/xinyu/bandits_pj/PRB/baselines/NeuralTS.py:74: UserWarning: The use of `x.T` on tensors of dimension other than 2 to reverse their shape is deprecated and it will throw an error in a future release. Consider `x.mT` to transpose batches of matrices or `x.permute(*torch.arange(x.ndim - 1, -1, -1))` to reverse the dimensions of a tensor. (Triggered internally at /pytorch/aten/src/ATen/native/TensorShape.cpp:4416.)
+  self.Design+=torch.matmul(g,g.T).to(device)
+Data Source: /mnt/data/xinyu/bandits_pj/PRB/online_link_prediction/data
+3679 6321
+✅ [Done] Amazon | EE-Net | Run 3 | Final: 2338
+Data Source: /mnt/data/xinyu/bandits_pj/PRB/online_link_prediction/data
+3679 6321
+✅ [Done] Amazon | EE-Net | Run 1 | Final: 3543
+Data Source: /mnt/data/xinyu/bandits_pj/PRB/online_link_prediction/data
+3679 6321
+✅ [Done] Amazon | EE-Net | Run 4 | Final: 2264
+Data Source: /mnt/data/xinyu/bandits_pj/PRB/online_link_prediction/data
+3679 6321
+✅ [Done] Amazon | EE-Net | Run 2 | Final: 4252
+Data Source: /mnt/data/xinyu/bandits_pj/PRB/online_link_prediction/data
+3679 6321
+✅ [Done] Amazon | EE-Net | Run 0 | Final: 3269
+Data Source: /mnt/data/xinyu/bandits_pj/PRB/online_link_prediction/data
+3679 6321
+✅ [Done] Amazon | Neural_epsilon | Run 2 | Final: 3552
+Data Source: /mnt/data/xinyu/bandits_pj/PRB/online_link_prediction/data
+3679 6321
+✅ [Done] Amazon | Neural_epsilon | Run 3 | Final: 2804
+Data Source: /mnt/data/xinyu/bandits_pj/PRB/online_link_prediction/data
+3679 6321
+✅ [Done] Amazon | Neural_epsilon | Run 1 | Final: 3900
+Data Source: /mnt/data/xinyu/bandits_pj/PRB/online_link_prediction/data
+3679 6321
+✅ [Done] Amazon | Neural_epsilon | Run 4 | Final: 3489
+Data Source: /mnt/data/xinyu/bandits_pj/PRB/online_link_prediction/data
+3679 6321
+✅ [Done] Amazon | Neural_epsilon | Run 0 | Final: 3905
+Data Source: /mnt/data/xinyu/bandits_pj/PRB/online_link_prediction/data
+3679 6321
+✅ [Done] Amazon | NeuralUCB | Run 3 | Final: 2843
+Data Source: /mnt/data/xinyu/bandits_pj/PRB/online_link_prediction/data
+3679 6321
+✅ [Done] Amazon | NeuralUCB | Run 4 | Final: 2701
+Data Source: /mnt/data/xinyu/bandits_pj/PRB/online_link_prediction/data
+3679 6321
+✅ [Done] Amazon | NeuralUCB | Run 0 | Final: 2958
+Data Source: /mnt/data/xinyu/bandits_pj/PRB/online_link_prediction/data
+3679 6321
+✅ [Done] Amazon | NeuralUCB | Run 2 | Final: 2173
+Data Source: /mnt/data/xinyu/bandits_pj/PRB/online_link_prediction/data
+3679 6321
+✅ [Done] Amazon | NeuralUCB | Run 1 | Final: 2139
+Data Source: /mnt/data/xinyu/bandits_pj/PRB/online_link_prediction/data
+3679 6321
+✅ [Done] Amazon | NeuralTS | Run 1 | Final: 4867
+Data Source: /mnt/data/xinyu/bandits_pj/PRB/online_link_prediction/data
+3679 6321
+✅ [Done] Amazon | NeuralTS | Run 0 | Final: 2760
+Data Source: /mnt/data/xinyu/bandits_pj/PRB/online_link_prediction/data
+3679 6321
+✅ [Done] Amazon | NeuralTS | Run 2 | Final: 2813
+Data Source: /mnt/data/xinyu/bandits_pj/PRB/online_link_prediction/data
+3679 6321
+✅ [Done] Amazon | NeuralTS | Run 4 | Final: 3237
+Data Source: /mnt/data/xinyu/bandits_pj/PRB/online_link_prediction/data
+3679 6321
+✅ [Done] Amazon | NeuralTS | Run 3 | Final: 5411
+
+=== Saving Results ===
+Saved: Amazon_EE-Net_regret.npy (Shape: (5, 10000))
+Saved: Amazon_Neural_epsilon_regret.npy (Shape: (5, 10000))
+Saved: Amazon_NeuralUCB_regret.npy (Shape: (5, 10000))
+Saved: Amazon_NeuralTS_regret.npy (Shape: (5, 10000))
+
+All tasks finished in 45.38 minutes.

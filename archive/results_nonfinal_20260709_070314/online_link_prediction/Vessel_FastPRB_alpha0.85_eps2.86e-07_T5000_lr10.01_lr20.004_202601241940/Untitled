@@ -1,0 +1,1 @@
+nohup python -u main.py   --graph_name Collab   --method PRB   --alpha 0.85   --power_T 50   --T 5000   --lr1 0.01   --lr2 0.004      > run_collab_prb.log 2>&1 &

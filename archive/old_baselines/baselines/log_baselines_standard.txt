@@ -1,0 +1,166 @@
+nohup: ignoring input
+Data Source: /mnt/data/xinyu/bandits_pj/PRB/online_link_prediction/data
+=== Starting Parallel Baselines ===
+Datasets: ['MovieLens', 'Facebook', 'GrQc']
+Methods:  ['EE-Net', 'Neural_epsilon', 'NeuralUCB', 'NeuralTS']
+Total Tasks: 60
+Workers: 20
+==================================================
+/mnt/data/xinyu/bandits_pj/PRB/.venv/lib/python3.10/site-packages/outdated/__init__.py:36: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import parse_version
+/mnt/data/xinyu/bandits_pj/PRB/.venv/lib/python3.10/site-packages/outdated/__init__.py:36: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import parse_version
+/mnt/data/xinyu/bandits_pj/PRB/.venv/lib/python3.10/site-packages/outdated/__init__.py:36: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import parse_version
+/mnt/data/xinyu/bandits_pj/PRB/.venv/lib/python3.10/site-packages/outdated/__init__.py:36: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import parse_version
+/mnt/data/xinyu/bandits_pj/PRB/.venv/lib/python3.10/site-packages/outdated/__init__.py:36: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import parse_version
+/mnt/data/xinyu/bandits_pj/PRB/.venv/lib/python3.10/site-packages/outdated/__init__.py:36: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import parse_version
+/mnt/data/xinyu/bandits_pj/PRB/.venv/lib/python3.10/site-packages/outdated/__init__.py:36: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import parse_version
+/mnt/data/xinyu/bandits_pj/PRB/.venv/lib/python3.10/site-packages/outdated/__init__.py:36: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import parse_version
+/mnt/data/xinyu/bandits_pj/PRB/.venv/lib/python3.10/site-packages/outdated/__init__.py:36: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import parse_version
+/mnt/data/xinyu/bandits_pj/PRB/.venv/lib/python3.10/site-packages/outdated/__init__.py:36: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import parse_version
+/mnt/data/xinyu/bandits_pj/PRB/.venv/lib/python3.10/site-packages/outdated/__init__.py:36: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import parse_version
+/mnt/data/xinyu/bandits_pj/PRB/.venv/lib/python3.10/site-packages/outdated/__init__.py:36: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import parse_version
+/mnt/data/xinyu/bandits_pj/PRB/.venv/lib/python3.10/site-packages/outdated/__init__.py:36: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import parse_version
+/mnt/data/xinyu/bandits_pj/PRB/.venv/lib/python3.10/site-packages/outdated/__init__.py:36: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import parse_version
+/mnt/data/xinyu/bandits_pj/PRB/.venv/lib/python3.10/site-packages/outdated/__init__.py:36: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import parse_version
+/mnt/data/xinyu/bandits_pj/PRB/.venv/lib/python3.10/site-packages/outdated/__init__.py:36: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import parse_version
+/mnt/data/xinyu/bandits_pj/PRB/.venv/lib/python3.10/site-packages/outdated/__init__.py:36: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import parse_version
+/mnt/data/xinyu/bandits_pj/PRB/.venv/lib/python3.10/site-packages/outdated/__init__.py:36: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import parse_version
+/mnt/data/xinyu/bandits_pj/PRB/.venv/lib/python3.10/site-packages/outdated/__init__.py:36: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import parse_version
+/mnt/data/xinyu/bandits_pj/PRB/.venv/lib/python3.10/site-packages/outdated/__init__.py:36: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import parse_version
+/mnt/data/xinyu/bandits_pj/PRB/.venv/lib/python3.10/site-packages/outdated/__init__.py:36: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import parse_version
+/mnt/data/xinyu/bandits_pj/PRB/baselines/NeuralTS.py:74: UserWarning: The use of `x.T` on tensors of dimension other than 2 to reverse their shape is deprecated and it will throw an error in a future release. Consider `x.mT` to transpose batches of matrices or `x.permute(*torch.arange(x.ndim - 1, -1, -1))` to reverse the dimensions of a tensor. (Triggered internally at /pytorch/aten/src/ATen/native/TensorShape.cpp:4416.)
+  self.Design+=torch.matmul(g,g.T).to(device)
+/mnt/data/xinyu/bandits_pj/PRB/baselines/NeuralTS.py:74: UserWarning: The use of `x.T` on tensors of dimension other than 2 to reverse their shape is deprecated and it will throw an error in a future release. Consider `x.mT` to transpose batches of matrices or `x.permute(*torch.arange(x.ndim - 1, -1, -1))` to reverse the dimensions of a tensor. (Triggered internally at /pytorch/aten/src/ATen/native/TensorShape.cpp:4416.)
+  self.Design+=torch.matmul(g,g.T).to(device)
+/mnt/data/xinyu/bandits_pj/PRB/baselines/NeuralTS.py:74: UserWarning: The use of `x.T` on tensors of dimension other than 2 to reverse their shape is deprecated and it will throw an error in a future release. Consider `x.mT` to transpose batches of matrices or `x.permute(*torch.arange(x.ndim - 1, -1, -1))` to reverse the dimensions of a tensor. (Triggered internally at /pytorch/aten/src/ATen/native/TensorShape.cpp:4416.)
+  self.Design+=torch.matmul(g,g.T).to(device)
+/mnt/data/xinyu/bandits_pj/PRB/baselines/NeuralTS.py:74: UserWarning: The use of `x.T` on tensors of dimension other than 2 to reverse their shape is deprecated and it will throw an error in a future release. Consider `x.mT` to transpose batches of matrices or `x.permute(*torch.arange(x.ndim - 1, -1, -1))` to reverse the dimensions of a tensor. (Triggered internally at /pytorch/aten/src/ATen/native/TensorShape.cpp:4416.)
+  self.Design+=torch.matmul(g,g.T).to(device)
+/mnt/data/xinyu/bandits_pj/PRB/baselines/NeuralTS.py:74: UserWarning: The use of `x.T` on tensors of dimension other than 2 to reverse their shape is deprecated and it will throw an error in a future release. Consider `x.mT` to transpose batches of matrices or `x.permute(*torch.arange(x.ndim - 1, -1, -1))` to reverse the dimensions of a tensor. (Triggered internally at /pytorch/aten/src/ATen/native/TensorShape.cpp:4416.)
+  self.Design+=torch.matmul(g,g.T).to(device)
+Data Source: /mnt/data/xinyu/bandits_pj/PRB/online_link_prediction/data
+✅ [Done] MovieLens | EE-Net | Run 1 | Final: 8934
+Data Source: /mnt/data/xinyu/bandits_pj/PRB/online_link_prediction/data
+✅ [Done] MovieLens | EE-Net | Run 3 | Final: 8986
+Data Source: /mnt/data/xinyu/bandits_pj/PRB/online_link_prediction/data
+✅ [Done] MovieLens | EE-Net | Run 4 | Final: 9030
+Data Source: /mnt/data/xinyu/bandits_pj/PRB/online_link_prediction/data
+✅ [Done] MovieLens | EE-Net | Run 2 | Final: 9009
+Data Source: /mnt/data/xinyu/bandits_pj/PRB/online_link_prediction/data
+✅ [Done] MovieLens | EE-Net | Run 0 | Final: 9000
+Data Source: /mnt/data/xinyu/bandits_pj/PRB/online_link_prediction/data
+✅ [Done] MovieLens | Neural_epsilon | Run 0 | Final: 1903
+Data Source: /mnt/data/xinyu/bandits_pj/PRB/online_link_prediction/data
+✅ [Done] MovieLens | Neural_epsilon | Run 1 | Final: 1778
+Data Source: /mnt/data/xinyu/bandits_pj/PRB/online_link_prediction/data
+✅ [Done] MovieLens | Neural_epsilon | Run 2 | Final: 1952
+Data Source: /mnt/data/xinyu/bandits_pj/PRB/online_link_prediction/data
+✅ [Done] MovieLens | Neural_epsilon | Run 3 | Final: 1881
+Data Source: /mnt/data/xinyu/bandits_pj/PRB/online_link_prediction/data
+✅ [Done] MovieLens | Neural_epsilon | Run 4 | Final: 1874
+Data Source: /mnt/data/xinyu/bandits_pj/PRB/online_link_prediction/data
+✅ [Done] MovieLens | NeuralUCB | Run 2 | Final: 1913
+Data Source: /mnt/data/xinyu/bandits_pj/PRB/online_link_prediction/data
+✅ [Done] MovieLens | NeuralUCB | Run 0 | Final: 1766
+Data Source: /mnt/data/xinyu/bandits_pj/PRB/online_link_prediction/data
+✅ [Done] MovieLens | NeuralUCB | Run 1 | Final: 1832
+Data Source: /mnt/data/xinyu/bandits_pj/PRB/online_link_prediction/data
+✅ [Done] MovieLens | NeuralUCB | Run 4 | Final: 1769
+Data Source: /mnt/data/xinyu/bandits_pj/PRB/online_link_prediction/data
+✅ [Done] MovieLens | NeuralUCB | Run 3 | Final: 1786
+Data Source: /mnt/data/xinyu/bandits_pj/PRB/online_link_prediction/data
+✅ [Done] MovieLens | NeuralTS | Run 0 | Final: 1857
+Data Source: /mnt/data/xinyu/bandits_pj/PRB/online_link_prediction/data
+✅ [Done] MovieLens | NeuralTS | Run 2 | Final: 1865
+Data Source: /mnt/data/xinyu/bandits_pj/PRB/online_link_prediction/data
+✅ [Done] MovieLens | NeuralTS | Run 4 | Final: 1759
+Data Source: /mnt/data/xinyu/bandits_pj/PRB/online_link_prediction/data
+✅ [Done] MovieLens | NeuralTS | Run 1 | Final: 1846
+Data Source: /mnt/data/xinyu/bandits_pj/PRB/online_link_prediction/data
+✅ [Done] MovieLens | NeuralTS | Run 3 | Final: 1779
+✅ [Done] Facebook | Neural_epsilon | Run 0 | Final: 1797
+✅ [Done] Facebook | Neural_epsilon | Run 1 | Final: 2375
+✅ [Done] Facebook | Neural_epsilon | Run 3 | Final: 1969
+✅ [Done] Facebook | Neural_epsilon | Run 4 | Final: 2613
+✅ [Done] Facebook | Neural_epsilon | Run 2 | Final: 2025
+✅ [Done] Facebook | NeuralUCB | Run 0 | Final: 3138
+✅ [Done] Facebook | NeuralUCB | Run 1 | Final: 1664
+✅ [Done] Facebook | NeuralUCB | Run 2 | Final: 1749
+✅ [Done] Facebook | NeuralUCB | Run 4 | Final: 2986
+✅ [Done] Facebook | NeuralUCB | Run 3 | Final: 1715
+✅ [Done] Facebook | NeuralTS | Run 1 | Final: 5761
+✅ [Done] Facebook | NeuralTS | Run 3 | Final: 2532
+✅ [Done] Facebook | NeuralTS | Run 4 | Final: 1815
+✅ [Done] Facebook | NeuralTS | Run 2 | Final: 1820
+✅ [Done] Facebook | NeuralTS | Run 0 | Final: 1753
+✅ [Done] GrQc | Neural_epsilon | Run 3 | Final: 3693
+/mnt/data/xinyu/bandits_pj/PRB/baselines/NeuralTS.py:74: UserWarning: The use of `x.T` on tensors of dimension other than 2 to reverse their shape is deprecated and it will throw an error in a future release. Consider `x.mT` to transpose batches of matrices or `x.permute(*torch.arange(x.ndim - 1, -1, -1))` to reverse the dimensions of a tensor. (Triggered internally at /pytorch/aten/src/ATen/native/TensorShape.cpp:4416.)
+  self.Design+=torch.matmul(g,g.T).to(device)
+✅ [Done] GrQc | Neural_epsilon | Run 2 | Final: 3671
+/mnt/data/xinyu/bandits_pj/PRB/baselines/NeuralTS.py:74: UserWarning: The use of `x.T` on tensors of dimension other than 2 to reverse their shape is deprecated and it will throw an error in a future release. Consider `x.mT` to transpose batches of matrices or `x.permute(*torch.arange(x.ndim - 1, -1, -1))` to reverse the dimensions of a tensor. (Triggered internally at /pytorch/aten/src/ATen/native/TensorShape.cpp:4416.)
+  self.Design+=torch.matmul(g,g.T).to(device)
+✅ [Done] GrQc | Neural_epsilon | Run 1 | Final: 3139
+✅ [Done] GrQc | Neural_epsilon | Run 0 | Final: 3436
+/mnt/data/xinyu/bandits_pj/PRB/baselines/NeuralTS.py:74: UserWarning: The use of `x.T` on tensors of dimension other than 2 to reverse their shape is deprecated and it will throw an error in a future release. Consider `x.mT` to transpose batches of matrices or `x.permute(*torch.arange(x.ndim - 1, -1, -1))` to reverse the dimensions of a tensor. (Triggered internally at /pytorch/aten/src/ATen/native/TensorShape.cpp:4416.)
+  self.Design+=torch.matmul(g,g.T).to(device)
+/mnt/data/xinyu/bandits_pj/PRB/baselines/NeuralTS.py:74: UserWarning: The use of `x.T` on tensors of dimension other than 2 to reverse their shape is deprecated and it will throw an error in a future release. Consider `x.mT` to transpose batches of matrices or `x.permute(*torch.arange(x.ndim - 1, -1, -1))` to reverse the dimensions of a tensor. (Triggered internally at /pytorch/aten/src/ATen/native/TensorShape.cpp:4416.)
+  self.Design+=torch.matmul(g,g.T).to(device)
+✅ [Done] GrQc | Neural_epsilon | Run 4 | Final: 3265
+/mnt/data/xinyu/bandits_pj/PRB/baselines/NeuralTS.py:74: UserWarning: The use of `x.T` on tensors of dimension other than 2 to reverse their shape is deprecated and it will throw an error in a future release. Consider `x.mT` to transpose batches of matrices or `x.permute(*torch.arange(x.ndim - 1, -1, -1))` to reverse the dimensions of a tensor. (Triggered internally at /pytorch/aten/src/ATen/native/TensorShape.cpp:4416.)
+  self.Design+=torch.matmul(g,g.T).to(device)
+✅ [Done] GrQc | NeuralUCB | Run 0 | Final: 3015
+✅ [Done] GrQc | NeuralUCB | Run 1 | Final: 2874
+✅ [Done] GrQc | NeuralUCB | Run 2 | Final: 3011
+✅ [Done] GrQc | NeuralUCB | Run 3 | Final: 3400
+✅ [Done] GrQc | NeuralUCB | Run 4 | Final: 2900
+✅ [Done] GrQc | NeuralTS | Run 0 | Final: 2944
+✅ [Done] GrQc | NeuralTS | Run 1 | Final: 2892
+✅ [Done] GrQc | NeuralTS | Run 4 | Final: 3167
+✅ [Done] GrQc | NeuralTS | Run 2 | Final: 3176
+✅ [Done] GrQc | NeuralTS | Run 3 | Final: 3517
+✅ [Done] Facebook | EE-Net | Run 0 | Final: 8752
+✅ [Done] Facebook | EE-Net | Run 1 | Final: 8738
+✅ [Done] Facebook | EE-Net | Run 2 | Final: 8740
+✅ [Done] Facebook | EE-Net | Run 3 | Final: 8632
+✅ [Done] Facebook | EE-Net | Run 4 | Final: 8617
+✅ [Done] GrQc | EE-Net | Run 1 | Final: 8958
+✅ [Done] GrQc | EE-Net | Run 2 | Final: 8994
+✅ [Done] GrQc | EE-Net | Run 3 | Final: 9023
+✅ [Done] GrQc | EE-Net | Run 4 | Final: 8988
+✅ [Done] GrQc | EE-Net | Run 0 | Final: 8994
+
+=== Saving Results ===
+Saved: MovieLens_EE-Net_regret.npy (Shape: (5, 10000))
+Saved: MovieLens_Neural_epsilon_regret.npy (Shape: (5, 10000))
+Saved: MovieLens_NeuralUCB_regret.npy (Shape: (5, 10000))
+Saved: MovieLens_NeuralTS_regret.npy (Shape: (5, 10000))
+Saved: Facebook_EE-Net_regret.npy (Shape: (5, 10000))
+Saved: Facebook_Neural_epsilon_regret.npy (Shape: (5, 10000))
+Saved: Facebook_NeuralUCB_regret.npy (Shape: (5, 10000))
+Saved: Facebook_NeuralTS_regret.npy (Shape: (5, 10000))
+Saved: GrQc_EE-Net_regret.npy (Shape: (5, 10000))
+Saved: GrQc_Neural_epsilon_regret.npy (Shape: (5, 10000))
+Saved: GrQc_NeuralUCB_regret.npy (Shape: (5, 10000))
+Saved: GrQc_NeuralTS_regret.npy (Shape: (5, 10000))
+
+All tasks finished in 124.20 minutes.

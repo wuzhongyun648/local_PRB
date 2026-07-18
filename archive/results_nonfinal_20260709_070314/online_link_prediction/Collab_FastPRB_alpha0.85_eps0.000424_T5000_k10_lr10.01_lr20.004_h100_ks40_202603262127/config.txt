@@ -1,0 +1,16 @@
+graph_name: Collab
+method: FastPRB
+alpha: 0.85
+appr_eps: 0.000424
+power_T: None
+T: 5000
+lr1: 0.01
+lr2: 0.004
+if_save: False
+workers: 10
+runs: 10
+seed: 0
+n_neg: 9
+init_edges: None
+hidden: 100
+kernel_size: None

@@ -1,0 +1,67 @@
+{
+  "run_name": "20260506_033529",
+  "save_dir": "/mnt/data/xinyu/Fast_bandit/results/baselines_new/20260506_033529",
+  "args": {
+    "datasets": [
+      "MovieLens"
+    ],
+    "methods": [
+      "NeuralUCB",
+      "NeuralTS",
+      "NeuralGreedy"
+    ],
+    "T": 20,
+    "lamdba": 0.1,
+    "nu": 0.001,
+    "lr1": 0.1,
+    "lr2": 0.01,
+    "runs": 1,
+    "workers": 1
+  },
+  "datasets": [
+    "MovieLens"
+  ],
+  "methods": [
+    "NeuralUCB",
+    "NeuralTS",
+    "NeuralGreedy"
+  ],
+  "runs": 1,
+  "workers": 1,
+  "train_schedule": {
+    "before_2000": "every 50 rounds",
+    "from_2000": "every 100 rounds"
+  },
+  "seed_rule": "seed = run_id * 100 + 43",
+  "successes": [
+    {
+      "dataset": "MovieLens",
+      "method": "NeuralUCB",
+      "run_id": 0,
+      "seed": 43
+    },
+    {
+      "dataset": "MovieLens",
+      "method": "NeuralTS",
+      "run_id": 0,
+      "seed": 43
+    },
+    {
+      "dataset": "MovieLens",
+      "method": "NeuralGreedy",
+      "run_id": 0,
+      "seed": 43
+    }
+  ],
+  "failures": [],
+  "saved_files": [
+    "/mnt/data/xinyu/Fast_bandit/results/baselines_new/20260506_033529/MovieLens_NeuralUCB_regret.npy",
+    "/mnt/data/xinyu/Fast_bandit/results/baselines_new/20260506_033529/MovieLens_NeuralUCB_time.npy",
+    "/mnt/data/xinyu/Fast_bandit/results/baselines_new/20260506_033529/MovieLens_NeuralTS_regret.npy",
+    "/mnt/data/xinyu/Fast_bandit/results/baselines_new/20260506_033529/MovieLens_NeuralTS_time.npy",
+    "/mnt/data/xinyu/Fast_bandit/results/baselines_new/20260506_033529/MovieLens_NeuralGreedy_regret.npy",
+    "/mnt/data/xinyu/Fast_bandit/results/baselines_new/20260506_033529/MovieLens_NeuralGreedy_time.npy"
+  ],
+  "elapsed_seconds": 9.385431051254272,
+  "created_at": "2026-05-06 03:35:29"
+}

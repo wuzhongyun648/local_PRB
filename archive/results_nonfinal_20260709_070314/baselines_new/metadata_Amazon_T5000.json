@@ -1,0 +1,291 @@
+{
+  "args": {
+    "datasets": [
+      "Amazon"
+    ],
+    "methods": [
+      "EE-Net",
+      "NeuralUCB",
+      "NeuralTS",
+      "NeuralGreedy"
+    ],
+    "T": 5000,
+    "lamdba": 0.1,
+    "nu": 0.001,
+    "lr1": 0.1,
+    "lr2": 0.01,
+    "runs": 10,
+    "workers": 48
+  },
+  "datasets": [
+    "Amazon"
+  ],
+  "methods": [
+    "EE-Net",
+    "NeuralUCB",
+    "NeuralTS",
+    "NeuralGreedy"
+  ],
+  "runs": 10,
+  "workers": 48,
+  "train_schedule": {
+    "before_2000": "every 50 rounds",
+    "from_2000": "every 100 rounds"
+  },
+  "seed_rule": "seed = run_id * 100 + 43",
+  "successes": [
+    {
+      "dataset": "Amazon",
+      "method": "EE-Net",
+      "run_id": 0,
+      "seed": 43
+    },
+    {
+      "dataset": "Amazon",
+      "method": "EE-Net",
+      "run_id": 1,
+      "seed": 143
+    },
+    {
+      "dataset": "Amazon",
+      "method": "EE-Net",
+      "run_id": 2,
+      "seed": 243
+    },
+    {
+      "dataset": "Amazon",
+      "method": "EE-Net",
+      "run_id": 3,
+      "seed": 343
+    },
+    {
+      "dataset": "Amazon",
+      "method": "EE-Net",
+      "run_id": 4,
+      "seed": 443
+    },
+    {
+      "dataset": "Amazon",
+      "method": "EE-Net",
+      "run_id": 5,
+      "seed": 543
+    },
+    {
+      "dataset": "Amazon",
+      "method": "EE-Net",
+      "run_id": 6,
+      "seed": 643
+    },
+    {
+      "dataset": "Amazon",
+      "method": "EE-Net",
+      "run_id": 7,
+      "seed": 743
+    },
+    {
+      "dataset": "Amazon",
+      "method": "EE-Net",
+      "run_id": 8,
+      "seed": 843
+    },
+    {
+      "dataset": "Amazon",
+      "method": "EE-Net",
+      "run_id": 9,
+      "seed": 943
+    },
+    {
+      "dataset": "Amazon",
+      "method": "NeuralUCB",
+      "run_id": 0,
+      "seed": 43
+    },
+    {
+      "dataset": "Amazon",
+      "method": "NeuralUCB",
+      "run_id": 1,
+      "seed": 143
+    },
+    {
+      "dataset": "Amazon",
+      "method": "NeuralUCB",
+      "run_id": 2,
+      "seed": 243
+    },
+    {
+      "dataset": "Amazon",
+      "method": "NeuralUCB",
+      "run_id": 3,
+      "seed": 343
+    },
+    {
+      "dataset": "Amazon",
+      "method": "NeuralUCB",
+      "run_id": 4,
+      "seed": 443
+    },
+    {
+      "dataset": "Amazon",
+      "method": "NeuralUCB",
+      "run_id": 5,
+      "seed": 543
+    },
+    {
+      "dataset": "Amazon",
+      "method": "NeuralUCB",
+      "run_id": 6,
+      "seed": 643
+    },
+    {
+      "dataset": "Amazon",
+      "method": "NeuralUCB",
+      "run_id": 7,
+      "seed": 743
+    },
+    {
+      "dataset": "Amazon",
+      "method": "NeuralUCB",
+      "run_id": 8,
+      "seed": 843
+    },
+    {
+      "dataset": "Amazon",
+      "method": "NeuralUCB",
+      "run_id": 9,
+      "seed": 943
+    },
+    {
+      "dataset": "Amazon",
+      "method": "NeuralTS",
+      "run_id": 0,
+      "seed": 43
+    },
+    {
+      "dataset": "Amazon",
+      "method": "NeuralTS",
+      "run_id": 1,
+      "seed": 143
+    },
+    {
+      "dataset": "Amazon",
+      "method": "NeuralTS",
+      "run_id": 2,
+      "seed": 243
+    },
+    {
+      "dataset": "Amazon",
+      "method": "NeuralTS",
+      "run_id": 3,
+      "seed": 343
+    },
+    {
+      "dataset": "Amazon",
+      "method": "NeuralTS",
+      "run_id": 4,
+      "seed": 443
+    },
+    {
+      "dataset": "Amazon",
+      "method": "NeuralTS",
+      "run_id": 5,
+      "seed": 543
+    },
+    {
+      "dataset": "Amazon",
+      "method": "NeuralTS",
+      "run_id": 6,
+      "seed": 643
+    },
+    {
+      "dataset": "Amazon",
+      "method": "NeuralTS",
+      "run_id": 7,
+      "seed": 743
+    },
+    {
+      "dataset": "Amazon",
+      "method": "NeuralTS",
+      "run_id": 8,
+      "seed": 843
+    },
+    {
+      "dataset": "Amazon",
+      "method": "NeuralTS",
+      "run_id": 9,
+      "seed": 943
+    },
+    {
+      "dataset": "Amazon",
+      "method": "NeuralGreedy",
+      "run_id": 0,
+      "seed": 43
+    },
+    {
+      "dataset": "Amazon",
+      "method": "NeuralGreedy",
+      "run_id": 1,
+      "seed": 143
+    },
+    {
+      "dataset": "Amazon",
+      "method": "NeuralGreedy",
+      "run_id": 2,
+      "seed": 243
+    },
+    {
+      "dataset": "Amazon",
+      "method": "NeuralGreedy",
+      "run_id": 3,
+      "seed": 343
+    },
+    {
+      "dataset": "Amazon",
+      "method": "NeuralGreedy",
+      "run_id": 4,
+      "seed": 443
+    },
+    {
+      "dataset": "Amazon",
+      "method": "NeuralGreedy",
+      "run_id": 5,
+      "seed": 543
+    },
+    {
+      "dataset": "Amazon",
+      "method": "NeuralGreedy",
+      "run_id": 6,
+      "seed": 643
+    },
+    {
+      "dataset": "Amazon",
+      "method": "NeuralGreedy",
+      "run_id": 7,
+      "seed": 743
+    },
+    {
+      "dataset": "Amazon",
+      "method": "NeuralGreedy",
+      "run_id": 8,
+      "seed": 843
+    },
+    {
+      "dataset": "Amazon",
+      "method": "NeuralGreedy",
+      "run_id": 9,
+      "seed": 943
+    }
+  ],
+  "failures": [],
+  "saved_files": [
+    "/mnt/data/xinyu/Fast_bandit/results/baselines_new/Amazon_EE-Net_regret.npy",
+    "/mnt/data/xinyu/Fast_bandit/results/baselines_new/Amazon_EE-Net_time.npy",
+    "/mnt/data/xinyu/Fast_bandit/results/baselines_new/Amazon_NeuralUCB_regret.npy",
+    "/mnt/data/xinyu/Fast_bandit/results/baselines_new/Amazon_NeuralUCB_time.npy",
+    "/mnt/data/xinyu/Fast_bandit/results/baselines_new/Amazon_NeuralTS_regret.npy",
+    "/mnt/data/xinyu/Fast_bandit/results/baselines_new/Amazon_NeuralTS_time.npy",
+    "/mnt/data/xinyu/Fast_bandit/results/baselines_new/Amazon_NeuralGreedy_regret.npy",
+    "/mnt/data/xinyu/Fast_bandit/results/baselines_new/Amazon_NeuralGreedy_time.npy"
+  ],
+  "elapsed_seconds": 226.28893876075745,
+  "created_at": "2026-05-06 02:09:18"
+}

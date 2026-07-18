@@ -1,0 +1,12 @@
+graph_name: PPA
+method: PRB
+alpha: 0.85
+appr_eps: None
+power_T: 50
+T: 5000
+lr1: 0.01
+lr2: 0.004
+if_save: False
+workers: 3
+runs: 3
+seed: 0

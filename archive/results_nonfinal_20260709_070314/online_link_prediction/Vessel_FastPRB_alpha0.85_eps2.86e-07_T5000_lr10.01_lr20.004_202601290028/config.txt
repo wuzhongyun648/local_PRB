@@ -1,0 +1,13 @@
+graph_name: Vessel
+method: FastPRB
+alpha: 0.85
+appr_eps: 2.86e-07
+power_T: None
+T: 5000
+lr1: 0.01
+lr2: 0.004
+if_save: False
+workers: 1
+runs: 10
+seed: 0
+init_edges: None

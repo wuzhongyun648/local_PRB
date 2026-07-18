@@ -1,0 +1,13 @@
+graph_name: PPA
+method: FastPRB
+alpha: 0.85
+appr_eps: 1e-05
+power_T: None
+T: 500
+lr1: 0.01
+lr2: 0.004
+if_save: False
+workers: 1
+runs: 1
+seed: 0
+init_edges: 100
