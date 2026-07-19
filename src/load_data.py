@@ -93,6 +93,7 @@ class load_facebook:
         arm = np.random.choice(range(self.n_arm))
         #print(pos_index.shape)
         pos = self.pos_index[np.random.choice(range(self.p_d), replace=False)]
+        user, item = int(pos[0]), int(pos[1])
         neg = self.neg_index[np.random.choice(range(self.n_d), self.n_neg, replace=False)]
         X_ind = np.concatenate((neg[:arm], [pos], neg[arm:]), axis=0) 
         # print("X_ind is:",X_ind)
@@ -100,12 +101,6 @@ class load_facebook:
         for i,ind in enumerate(X_ind):
             #X.append(np.sqrt(np.multiply(self.I[ind], u_fea)))
             X.append(np.concatenate((self.U[ind[0]], self.U[ind[1]]))) 
-            if arm == self.n_arm - 1 and i == arm:
-                user = ind[0]
-                item = ind[1]
-            elif i == arm + 1 : 
-                user = ind[0]
-                item = ind[1]
         # print("X is \n",X)
         rwd = np.zeros(self.n_arm)
         rwd[arm] = 1
@@ -145,6 +140,7 @@ class load_grqc:
         arm = np.random.choice(range(self.n_arm))
         #print(pos_index.shape)
         pos = self.pos_index[np.random.choice(range(self.p_d), replace=False)]
+        user, item = int(pos[0]), int(pos[1])
         neg = self.neg_index[np.random.choice(range(self.n_d), self.n_neg, replace=False)]
         X_ind = np.concatenate((neg[:arm], [pos], neg[arm:]), axis=0) 
         # print("X_ind is:",X_ind)
@@ -152,12 +148,6 @@ class load_grqc:
         for i,ind in enumerate(X_ind):
             #X.append(np.sqrt(np.multiply(self.I[ind], u_fea)))
             X.append(np.concatenate((self.U[ind[0]], self.U[ind[1]]))) 
-            if arm == self.n_arm - 1 and i == arm:
-                user = ind[0]
-                item = ind[1]
-            elif i == arm + 1 : 
-                user = ind[0]
-                item = ind[1]
         # print("X is \n",X)
         rwd = np.zeros(self.n_arm)
         rwd[arm] = 1
@@ -198,6 +188,7 @@ class load_amazon_fashion:
         arm = np.random.choice(range(self.n_arm))
         #print(pos_index.shape)
         pos = self.pos_index[np.random.choice(range(self.p_d), replace=False)]
+        user, item = int(pos[0]), int(pos[1])
         neg = self.neg_index[np.random.choice(range(self.n_d), self.n_neg, replace=False)]
         X_ind = np.concatenate((neg[:arm], [pos], neg[arm:]), axis=0) 
         # print("X_ind is:",X_ind)
@@ -205,12 +196,6 @@ class load_amazon_fashion:
         for i,ind in enumerate(X_ind):
             #X.append(np.sqrt(np.multiply(self.I[ind], u_fea)))
             X.append(np.concatenate((self.U[ind[0]], self.I[ind[1]]))) 
-            if arm == self.n_arm - 1 and i == arm:
-                user = ind[0]
-                item = ind[1]
-            elif i == arm + 1 : 
-                user = ind[0]
-                item = ind[1]
         rwd = np.zeros(self.n_arm)
         rwd[arm] = 1
         return np.array(X),X_ind, rwd, arm, user, item  # arm is the one that randomly picked up and settled to 1
