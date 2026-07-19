@@ -187,7 +187,10 @@ class MovieLens(graph):
                 A[user, item + num_users] = 1
             else:
                 user, item, weight = G[i]
-                if weight == -1:
+                # MovieLens uses the same label contract as its bandit loader:
+                # +1 is a positive edge, -1 is a negative example, and 0 is
+                # withheld/no edge.
+                if weight == 1:
                     A[item + num_users, user] = 1
                     A[user, item + num_users] = 1
                 #else: A[item + num_users , user] = 0
