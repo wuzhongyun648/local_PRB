@@ -110,14 +110,13 @@ def build_ee_net(dim, n_arm, args, kernel_size):
 
 def build_fixed_test_set(loader, run_seed):
     """Build a deterministic test set without consuming the online RNG stream."""
-    caller_state = np.random.get_state()
     test_seed = (int(run_seed) + TEST_SEED_OFFSET) % (2**32)
-    test_state = np.random.RandomState(test_seed).get_state()
+    online_rng = loader.rng
     try:
-        np.random.set_state(test_state)
+        loader.rng = np.random.default_rng(test_seed)
         return loader.testing_dataset()
     finally:
-        np.random.set_state(caller_state)
+        loader.rng = online_rng
 
 
 def apply_graph_update(graph_manager, *edge_args):
@@ -218,22 +217,7 @@ def run_experiment(run_id,args, save_dir):
     
     print(f">>> [Worker {os.getpid()}] Starting Run {run_id}...", flush=True)
     LoaderClass, GraphClass, data_path, n_users, n_items = get_configurations(args.graph_name)
-    if args.graph_name in ['PPA', 'Vessel'] and args.init_edges is not None:
-        bandit_loader = LoaderClass(max_init_edges=args.init_edges)
-    else:
-        bandit_loader = LoaderClass(n_neg=args.n_neg)
-    loader_rng_state = np.random.get_state()
-
-    def loader_step():
-        nonlocal loader_rng_state
-        caller_state = np.random.get_state()
-        np.random.set_state(loader_rng_state)
-        try:
-            result = bandit_loader.step()
-            loader_rng_state = np.random.get_state()
-            return result
-        finally:
-            np.random.set_state(caller_state)
+    bandit_loader = LoaderClass(n_neg=args.n_neg, seed=seed)
     print(f"-> Loading Graph from {data_path} ...")
     graph_manager = GraphClass(data_path)
     if args.graph_name in ['MovieLens', 'Amazon_fashion']:
@@ -338,7 +322,7 @@ def run_experiment(run_id,args, save_dir):
         # --- A. Bandit Step (Context) ---
         online_step_t0 = time.perf_counter()
         
-        step_result = loader_step()
+        step_result = bandit_loader.step()
         context, context_ind, rwd, _, _, _ = step_result
             
         # --- B. Neural Net Predict ---
