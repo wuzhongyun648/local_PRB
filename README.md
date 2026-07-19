@@ -274,6 +274,20 @@ python archive/maintenance_scripts/archive_paper_results.py
 
 The archive script is intended for maintenance use. Review `paper_result_selection.csv` before running it on a new result set.
 
+## Contract Tests
+
+Run the loader and graph-manager contracts before changing data sampling or
+graph-update behavior:
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+These tests use small synthetic fixtures and do not train a model or run an
+online experiment. Known P0 blockers are recorded as strict expected failures;
+an unexpected success means the implementation was fixed and its marker must
+be removed.
+
 ## Smoke Tests
 
 Use these checks after structural changes:
