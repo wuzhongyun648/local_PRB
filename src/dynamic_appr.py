@@ -10,6 +10,7 @@ def appr_push(indptr, indices, degree, p, residual, alpha, eps):
     queued = np.zeros(num_nodes, dtype=np.bool_)
     front = 0
     rear = 0
+    push_count = 0
 
     for u in range(num_nodes):
         if abs(residual[u]) >= eps * degree[u]:
@@ -25,6 +26,7 @@ def appr_push(indptr, indices, degree, p, residual, alpha, eps):
         value = residual[u]
         if abs(value) < eps * degree[u]:
             continue
+        push_count += 1
         p[u] += (1.0 - alpha) * value
         residual[u] = 0.0
         pushed = alpha * value / degree[u]
@@ -36,6 +38,7 @@ def appr_push(indptr, indices, degree, p, residual, alpha, eps):
                 queue[rear] = v
                 rear = (rear + 1) % (num_nodes + 1)
                 queued[v] = True
+    return push_count
 
 
 class DynamicAPPR:
@@ -50,6 +53,15 @@ class DynamicAPPR:
     """
 
     def __init__(self):
+        self.stats = {
+            "solves": 0,
+            "initializations": 0,
+            "fallback_resets": 0,
+            "insert_updates": 0,
+            "source_updates": 0,
+            "pushes": 0,
+        }
+        self.last_stats = {}
         self.reset()
 
     def reset(self):
@@ -88,11 +100,14 @@ class DynamicAPPR:
         source = np.asarray(source, dtype=np.float64)
         nnz = int(indptr[-1])
 
-        initialize = (
+        cold_start = (
             self.p is None
             or self.num_nodes != num_nodes
             or self.alpha != alpha
         )
+        initialize = cold_start
+        fallback_reset = False
+        changed_nodes = np.empty(0, dtype=np.int64)
         if not initialize:
             degree_delta = degree - self.degree
             changed_nodes = np.flatnonzero(degree_delta)
@@ -112,6 +127,7 @@ class DynamicAPPR:
             )
             if invalid_change:
                 initialize = True
+                fallback_reset = True
 
         if initialize:
             self.p = np.zeros(num_nodes, dtype=np.float64)
@@ -121,18 +137,37 @@ class DynamicAPPR:
             if len(changed_nodes):
                 self._insert_update(changed_nodes, degree, alpha)
 
-            source_support = np.flatnonzero(
-                (source != 0.0) | (self.source != 0.0)
-            )
+            source_support = np.flatnonzero(source != self.source)
             self.r[source_support] += (
                 source[source_support] - self.source[source_support]
             )
             self.source.fill(0.0)
             self.source[source_support] = source[source_support]
 
-        appr_push(indptr, indices, degree, self.p, self.r, alpha, eps)
+        source_changed = int(
+            np.count_nonzero(source)
+            if initialize
+            else len(source_support)
+        )
+        push_count = appr_push(
+            indptr, indices, degree, self.p, self.r, alpha, eps
+        )
         self.alpha = alpha
         self.num_nodes = num_nodes
         self.degree = degree.copy()
         self.nnz = nnz
+        inserted = int(not initialize and len(changed_nodes) == 2)
+        self.last_stats = {
+            "cold_start": bool(cold_start),
+            "fallback_reset": bool(fallback_reset),
+            "insert_update": bool(inserted),
+            "source_changed_nodes": source_changed,
+            "pushes": int(push_count),
+        }
+        self.stats["solves"] += 1
+        self.stats["initializations"] += int(initialize)
+        self.stats["fallback_resets"] += int(fallback_reset)
+        self.stats["insert_updates"] += inserted
+        self.stats["source_updates"] += source_changed
+        self.stats["pushes"] += int(push_count)
         return self.p.copy()
