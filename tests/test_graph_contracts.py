@@ -151,6 +151,22 @@ class GraphStateContractTests(unittest.TestCase):
         self.assertEqual(updated_csr, "updated-csr")
         manager.P.tocsr.assert_called_once_with()
 
+    def test_directed_bipartite_ablation_updates_only_user_column(self):
+        from src.main import apply_directed_bipartite_update_timed
+
+        manager = utils.MovieLens("synthetic")
+        manager.num_users = 2
+        manager.A = sp.lil_matrix((4, 4), dtype=np.float64)
+        manager.P = sp.csc_matrix((4, 4), dtype=np.float64)
+        manager.degree = np.zeros(4, dtype=np.float64)
+        manager.num_edges = 0
+        added, csr, _, _ = apply_directed_bipartite_update_timed(manager, 1, 0)
+        self.assertTrue(added)
+        self.assertTrue(sp.isspmatrix_csr(csr))
+        self.assertEqual(float(manager.A[3, 0]), 1.0)
+        self.assertEqual(float(manager.A[0, 3]), 0.0)
+        self.assertEqual(manager.num_edges, 1)
+
 
 class ActiveRegistryContractTests(unittest.TestCase):
     def test_selected_graph_edge_comes_from_selected_candidate(self):

@@ -149,6 +149,29 @@ class OGBLoaderContractTests(unittest.TestCase):
 
 
 class LoaderStreamContractTests(unittest.TestCase):
+    def test_full_pool_ablation_restores_all_movielens_edges(self):
+        from src.main import configure_ablation_loader
+
+        loader = make_split_small_loader(load_data.load_movielen)
+        all_positive = np.array([[0, 1], [1, 2], [2, 3]], dtype=np.int64)
+        all_negative = np.array([[0, 3], [1, 4], [2, 5]], dtype=np.int64)
+        loader.m = np.concatenate(
+            [
+                np.column_stack((all_positive, np.ones(len(all_positive)))),
+                np.column_stack((all_negative, -np.ones(len(all_negative)))),
+            ]
+        )
+        configure_ablation_loader(loader, "full_pool", seed=4)
+        np.testing.assert_array_equal(loader.pos_index, all_positive)
+        np.testing.assert_array_equal(loader.neg_index, all_negative)
+
+    def test_legacy_rng_ablation_uses_random_state(self):
+        from src.main import configure_ablation_loader
+
+        loader = make_split_small_loader(load_data.load_movielen)
+        configure_ablation_loader(loader, "legacy_rng", seed=4)
+        self.assertIsInstance(loader.rng, np.random.RandomState)
+
     @staticmethod
     def edge_keys(results):
         return [
