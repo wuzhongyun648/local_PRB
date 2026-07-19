@@ -72,6 +72,7 @@ METHOD_ALIASES = {
     "DynLocPRB": "dyn_locPRB",
 }
 METHOD_LABEL_SUFFIX = ""
+TEST_SEED_OFFSET = 1_000_003
 
 
 def parse_method(value):
@@ -105,6 +106,18 @@ def build_ee_net(dim, n_arm, args, kernel_size):
         neural_decision_maker=False,
         kernel_size=kernel_size,
     )
+
+
+def build_fixed_test_set(loader, run_seed):
+    """Build a deterministic test set without consuming the online RNG stream."""
+    caller_state = np.random.get_state()
+    test_seed = (int(run_seed) + TEST_SEED_OFFSET) % (2**32)
+    test_state = np.random.RandomState(test_seed).get_state()
+    try:
+        np.random.set_state(test_state)
+        return loader.testing_dataset()
+    finally:
+        np.random.set_state(caller_state)
 
 def get_configurations(graph_name):
     """
@@ -252,7 +265,7 @@ def run_experiment(run_id,args, save_dir):
         'other_time': 0.0,
     }
     _t_build0 = time.time()
-    fixed_test_set = bandit_loader.testing_dataset()
+    fixed_test_set = build_fixed_test_set(bandit_loader, seed)
     total_excluded_seconds += time.time() - _t_build0
 
     for t in range(args.T):

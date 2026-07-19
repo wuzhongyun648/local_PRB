@@ -141,22 +141,42 @@ class OGBLoaderContractTests(unittest.TestCase):
 
 
 class LoaderStreamContractTests(unittest.TestCase):
-    @unittest.expectedFailure
-    def test_fixed_test_events_do_not_overlap_online_events(self):
-        """Known P0: restoring the pre-test RNG reproduces the test events."""
+    @staticmethod
+    def edge_keys(results):
+        return [
+            tuple(np.asarray(result[1], dtype=np.int64).reshape(-1))
+            for result in results
+        ]
+
+    def test_fixed_test_events_do_not_replay_online_prefix(self):
+        from src.main import build_fixed_test_set
+
         loader = make_small_loader(load_data.load_movielen)
         np.random.seed(7)
-        pre_test_state = np.random.get_state()
-        fixed_test_set = loader.testing_dataset()
+        online_state = np.random.get_state()
+        fixed_test_set = build_fixed_test_set(loader, run_seed=7)
 
-        np.random.set_state(pre_test_state)
+        np.random.set_state(online_state)
         online_events = [loader.step() for _ in range(100)]
+        self.assertNotEqual(
+            self.edge_keys(fixed_test_set),
+            self.edge_keys(online_events),
+        )
 
-        def edge_key(result):
-            return tuple(np.asarray(result[1], dtype=np.int64).reshape(-1))
+    @unittest.expectedFailure
+    def test_fixed_test_edges_are_disjoint_from_online_edges(self):
+        """Separate data splits are still required for a strict no-overlap rule."""
+        from src.main import build_fixed_test_set
 
-        test_keys = {edge_key(result) for result in fixed_test_set}
-        online_keys = {edge_key(result) for result in online_events}
+        loader = make_small_loader(load_data.load_movielen)
+        np.random.seed(7)
+        online_state = np.random.get_state()
+        fixed_test_set = build_fixed_test_set(loader, run_seed=7)
+
+        np.random.set_state(online_state)
+        online_events = [loader.step() for _ in range(100)]
+        test_keys = set(self.edge_keys(fixed_test_set))
+        online_keys = set(self.edge_keys(online_events))
         self.assertTrue(test_keys.isdisjoint(online_keys))
 
 
