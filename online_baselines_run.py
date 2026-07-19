@@ -357,11 +357,11 @@ def seed_for_run(base_seed, run_id):
     return base_seed + run_id * 100 + 43
 
 
-def load_bandit(dataset_name, n_neg):
+def load_bandit(dataset_name, n_neg, seed):
     dataset_name = normalize_dataset_name(dataset_name)
     if dataset_name not in DATASET_LOADERS:
         raise ValueError(f"Unknown dataset: {dataset_name}")
-    return DATASET_LOADERS[dataset_name](n_neg=n_neg)
+    return DATASET_LOADERS[dataset_name](n_neg=n_neg, seed=seed)
 
 
 def should_train(t):
@@ -425,7 +425,7 @@ def run_single_task(dataset_name, method_name, run_id, args):
         dataset_name = normalize_dataset_name(dataset_name)
         seed = seed_for_run(args.seed, run_id)
         seed_everything(seed)
-        bandit = load_bandit(dataset_name, args.n_neg)
+        bandit = load_bandit(dataset_name, args.n_neg, seed)
         if bandit.n_arm != args.n_neg + 1:
             raise ValueError(f"{dataset_name} produced n_arm={bandit.n_arm}, expected {args.n_neg + 1}")
         model = build_model(method_name, bandit, args, dataset_name)
@@ -591,4 +591,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

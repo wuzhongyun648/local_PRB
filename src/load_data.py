@@ -20,12 +20,13 @@ torch.load = _safe_load_global
 
 
 class load_movielen:
-    def __init__(self, n_neg=9):
+    def __init__(self, n_neg=9, seed=0):
         # Fetch data
         self.m = np.load(os.path.join(DATA_DIR, "MovieLens/movie_2000users_10000items_entry.npy"))
         self.U = np.load(os.path.join(DATA_DIR, "MovieLens/movie_2000users_10000items_features.npy"))
         self.I = np.load(os.path.join(DATA_DIR, "MovieLens/movie_10000items_2000users_features.npy"))
         self.n_neg = n_neg
+        self.rng = np.random.default_rng(seed)
         self.n_arm = self.n_neg + 1
         self.dim = 20
         self.pos_index = []
@@ -50,9 +51,9 @@ class load_movielen:
         return test_data
     
     def step(self):        
-        arm = np.random.choice(range(self.n_arm))
-        pos = self.pos_index[np.random.choice(range(self.p_d), replace=False)] 
-        neg = self.neg_index[np.random.choice(range(self.n_d), self.n_neg, replace=False)]
+        arm = self.rng.choice(self.n_arm)
+        pos = self.pos_index[self.rng.choice(self.p_d)]
+        neg = self.neg_index[self.rng.choice(self.n_d, self.n_neg, replace=False)]
         X_ind = np.concatenate((neg[:arm], [pos], neg[arm:]), axis=0) 
         
         X = []
@@ -68,11 +69,12 @@ class load_movielen:
         return np.array(X), X_ind, rwd, arm, user, item
     
 class load_facebook:
-    def __init__(self, n_neg=9):
+    def __init__(self, n_neg=9, seed=0):
         # Fetch data
         self.m = np.load(os.path.join(DATA_DIR, "Facebook/facebook_combined_ALLusers_entry.npy"))
         self.U = np.load(os.path.join(DATA_DIR, "Facebook/facebook_combined_ALLusers_features.npy"))
         self.n_neg = n_neg
+        self.rng = np.random.default_rng(seed)
         self.n_arm = self.n_neg + 1
         self.dim = 20
         self.pos_index = []
@@ -90,11 +92,11 @@ class load_facebook:
         self.neg_index = np.array(self.neg_index)
 
     def step(self):        
-        arm = np.random.choice(range(self.n_arm))
+        arm = self.rng.choice(self.n_arm)
         #print(pos_index.shape)
-        pos = self.pos_index[np.random.choice(range(self.p_d), replace=False)]
+        pos = self.pos_index[self.rng.choice(self.p_d)]
         user, item = int(pos[0]), int(pos[1])
-        neg = self.neg_index[np.random.choice(range(self.n_d), self.n_neg, replace=False)]
+        neg = self.neg_index[self.rng.choice(self.n_d, self.n_neg, replace=False)]
         X_ind = np.concatenate((neg[:arm], [pos], neg[arm:]), axis=0) 
         # print("X_ind is:",X_ind)
         X = []
@@ -115,11 +117,12 @@ class load_facebook:
 
 
 class load_grqc:    
-    def __init__(self, n_neg=9):
+    def __init__(self, n_neg=9, seed=0):
         # Fetch data
         self.m = np.load(os.path.join(DATA_DIR, "GrQc/Insert/GrQc_ALLusers_entry.npy"))
         self.U = np.load(os.path.join(DATA_DIR, "GrQc/GrQc_ALLusers_features.npy"))
         self.n_neg = n_neg
+        self.rng = np.random.default_rng(seed)
         self.n_arm = self.n_neg + 1
         self.dim = 20
         self.pos_index = []
@@ -137,11 +140,11 @@ class load_grqc:
         self.neg_index = np.array(self.neg_index)
         
     def step(self):        
-        arm = np.random.choice(range(self.n_arm))
+        arm = self.rng.choice(self.n_arm)
         #print(pos_index.shape)
-        pos = self.pos_index[np.random.choice(range(self.p_d), replace=False)]
+        pos = self.pos_index[self.rng.choice(self.p_d)]
         user, item = int(pos[0]), int(pos[1])
-        neg = self.neg_index[np.random.choice(range(self.n_d), self.n_neg, replace=False)]
+        neg = self.neg_index[self.rng.choice(self.n_d, self.n_neg, replace=False)]
         X_ind = np.concatenate((neg[:arm], [pos], neg[arm:]), axis=0) 
         # print("X_ind is:",X_ind)
         X = []
@@ -161,12 +164,13 @@ class load_grqc:
 
 
 class load_amazon_fashion:
-    def __init__(self, n_neg=9):
+    def __init__(self, n_neg=9, seed=0):
         # Fetch data
         self.m = np.load(os.path.join(DATA_DIR, "Amazon_fashion/new/amazon_fashion_4000users_entry.npy"))
         self.U = np.load(os.path.join(DATA_DIR, "Amazon_fashion/new/amazon_fashion_4000users_4000items_features.npy"))
         self.I = np.load(os.path.join(DATA_DIR, "Amazon_fashion/new/amazon_fashion_4000items_4000users_features.npy"))
         self.n_neg = n_neg
+        self.rng = np.random.default_rng(seed)
         self.n_arm = self.n_neg + 1
         self.dim = 20
         self.pos_index = []
@@ -185,11 +189,11 @@ class load_amazon_fashion:
 
 
     def step(self):        
-        arm = np.random.choice(range(self.n_arm))
+        arm = self.rng.choice(self.n_arm)
         #print(pos_index.shape)
-        pos = self.pos_index[np.random.choice(range(self.p_d), replace=False)]
+        pos = self.pos_index[self.rng.choice(self.p_d)]
         user, item = int(pos[0]), int(pos[1])
-        neg = self.neg_index[np.random.choice(range(self.n_d), self.n_neg, replace=False)]
+        neg = self.neg_index[self.rng.choice(self.n_d, self.n_neg, replace=False)]
         X_ind = np.concatenate((neg[:arm], [pos], neg[arm:]), axis=0) 
         # print("X_ind is:",X_ind)
         X = []
@@ -217,13 +221,14 @@ except ImportError:
     HAS_OGB = False
 
 class _OGBBaseLoader:
-    def __init__(self, dataset_name, n_pos=1, n_neg=9, is_directed=False, need_norm=True):
+    def __init__(self, dataset_name, n_pos=1, n_neg=9, is_directed=False, need_norm=True, seed=0):
         if not HAS_OGB:
             raise ImportError("Please install ogb: pip install ogb")
             
         self.dataset_name = dataset_name
         self.n_pos = n_pos
         self.n_neg = n_neg
+        self.rng = np.random.default_rng(seed)
         self.n_arm = n_pos + n_neg
         self.is_directed = is_directed
         
@@ -240,7 +245,7 @@ class _OGBBaseLoader:
         self.num_nodes = int(graph['num_nodes'])
         
         if graph['node_feat'] is None:
-            self.node_feat = np.random.randn(self.num_nodes, 64).astype(np.float32)
+            self.node_feat = self.rng.standard_normal((self.num_nodes, 64)).astype(np.float32)
             self.dim = 128
         else:
             raw_feat = to_numpy(graph['node_feat'])
@@ -291,13 +296,13 @@ class _OGBBaseLoader:
         gc.collect()
 
     def step(self):
-        arm = np.random.choice(range(self.n_arm))
-        idx = np.random.choice(self.p_d)
+        arm = self.rng.choice(self.n_arm)
+        idx = self.rng.choice(self.p_d)
         pos = self.pos_index[idx] # shape (2,)
         neg_list = []
         while len(neg_list) < self.n_neg:
-            u = np.random.randint(self.num_nodes)
-            v = np.random.randint(self.num_nodes)
+            u = self.rng.integers(self.num_nodes)
+            v = self.rng.integers(self.num_nodes)
             if self.adj_gt[u, v] == 0:
                 neg_list.append([u, v])
         neg = np.array(neg_list) # shape (9, 2)
@@ -324,16 +329,16 @@ class _OGBBaseLoader:
         return test_data
 
 class load_ogb_collab(_OGBBaseLoader):
-    def __init__(self, n_neg=9):
-        super().__init__('ogbl-collab', n_pos=1, n_neg=n_neg, is_directed=False, need_norm=False)
+    def __init__(self, n_neg=9, seed=0):
+        super().__init__('ogbl-collab', n_pos=1, n_neg=n_neg, is_directed=False, need_norm=False, seed=seed)
 
 class load_ogb_ppa(_OGBBaseLoader):
-    def __init__(self, n_neg=9):
-        super().__init__('ogbl-ppa', n_pos=1, n_neg=n_neg, is_directed=False, need_norm=True)
+    def __init__(self, n_neg=9, seed=0):
+        super().__init__('ogbl-ppa', n_pos=1, n_neg=n_neg, is_directed=False, need_norm=True, seed=seed)
 
 class load_ogb_vessel(_OGBBaseLoader):
-    def __init__(self, n_neg=9):
-        super().__init__('ogbl-vessel', n_pos=1, n_neg=n_neg, is_directed=False, need_norm=True)
+    def __init__(self, n_neg=9, seed=0):
+        super().__init__('ogbl-vessel', n_pos=1, n_neg=n_neg, is_directed=False, need_norm=True, seed=seed)
         
         self.U = self.node_feat
         self.I = self.node_feat
@@ -342,9 +347,9 @@ class load_ogb_vessel(_OGBBaseLoader):
         self.tree = KDTree(self.node_feat) 
         
     def step(self):
-        arm = np.random.choice(range(self.n_arm))
+        arm = self.rng.choice(self.n_arm)
         
-        idx = np.random.choice(self.p_d)
+        idx = self.rng.choice(self.p_d)
         pos = self.pos_index[idx] # [u, v]
         u, v = pos[0], pos[1]
         
@@ -366,7 +371,7 @@ class load_ogb_vessel(_OGBBaseLoader):
                 break
         
         while len(neg_list) < self.n_neg:
-            rnd = np.random.randint(self.num_nodes)
+            rnd = self.rng.integers(self.num_nodes)
             if rnd != u and self.adj_gt[u, rnd] == 0:
                 neg_list.append([u, rnd])
         

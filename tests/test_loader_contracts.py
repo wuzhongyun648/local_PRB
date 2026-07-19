@@ -1,5 +1,4 @@
 import unittest
-from unittest import mock
 
 import numpy as np
 import scipy.sparse as sp
@@ -27,20 +26,25 @@ def make_small_loader(loader_class):
     loader.U = np.arange(10, dtype=np.float64).reshape(5, 2)
     if loader_class in (load_data.load_movielen, load_data.load_amazon_fashion):
         loader.I = np.arange(20, 30, dtype=np.float64).reshape(5, 2)
+    loader.rng = np.random.default_rng(0)
     return loader
 
 
-def deterministic_choice(positive_arm):
-    scalar_calls = 0
+class DeterministicRNG:
+    def __init__(self, positive_arm, integer_values=()):
+        self.positive_arm = positive_arm
+        self.scalar_calls = 0
+        self.integer_values = iter(integer_values)
 
-    def choice(_values, size=None, replace=True):
-        nonlocal scalar_calls
+    def choice(self, values, size=None, replace=True):
+        del replace
         if size is not None:
             return np.arange(size, dtype=np.int64)
-        scalar_calls += 1
-        return positive_arm if scalar_calls == 1 else 0
+        self.scalar_calls += 1
+        return self.positive_arm if self.scalar_calls == 1 else 0
 
-    return choice
+    def integers(self, _high):
+        return next(self.integer_values)
 
 
 def assert_step_contract(testcase, loader, result):
@@ -68,12 +72,8 @@ class SmallLoaderContractTests(unittest.TestCase):
         for arm in range(3):
             with self.subTest(loader=loader_class.__name__, arm=arm):
                 loader = make_small_loader(loader_class)
-                with mock.patch.object(
-                    load_data.np.random,
-                    "choice",
-                    side_effect=deterministic_choice(arm),
-                ):
-                    assert_step_contract(self, loader, loader.step())
+                loader.rng = DeterministicRNG(arm)
+                assert_step_contract(self, loader, loader.step())
 
     def test_movielens_step_contract(self):
         self.assert_loader_all_arm_positions(load_data.load_movielen)
@@ -115,29 +115,16 @@ class OGBLoaderContractTests(unittest.TestCase):
             for arm in range(3):
                 with self.subTest(loader=loader_class.__name__, arm=arm):
                     loader = make_ogb_loader(loader_class)
-                    randint_values = iter((2, 3, 3, 4))
-                    with mock.patch.object(
-                        load_data.np.random,
-                        "choice",
-                        side_effect=deterministic_choice(arm),
-                    ), mock.patch.object(
-                        load_data.np.random,
-                        "randint",
-                        side_effect=lambda *_args, **_kwargs: next(randint_values),
-                    ):
-                        assert_step_contract(self, loader, loader.step())
+                    loader.rng = DeterministicRNG(arm, (2, 3, 3, 4))
+                    assert_step_contract(self, loader, loader.step())
 
     def test_vessel_step_contract(self):
         for arm in range(3):
             with self.subTest(arm=arm):
                 loader = make_ogb_loader(load_data.load_ogb_vessel)
                 loader.tree = FakeKDTree()
-                with mock.patch.object(
-                    load_data.np.random,
-                    "choice",
-                    side_effect=deterministic_choice(arm),
-                ):
-                    assert_step_contract(self, loader, loader.step())
+                loader.rng = DeterministicRNG(arm)
+                assert_step_contract(self, loader, loader.step())
 
 
 class LoaderStreamContractTests(unittest.TestCase):
@@ -152,11 +139,9 @@ class LoaderStreamContractTests(unittest.TestCase):
         from src.main import build_fixed_test_set
 
         loader = make_small_loader(load_data.load_movielen)
-        np.random.seed(7)
-        online_state = np.random.get_state()
+        loader.rng = np.random.default_rng(7)
         fixed_test_set = build_fixed_test_set(loader, run_seed=7)
 
-        np.random.set_state(online_state)
         online_events = [loader.step() for _ in range(100)]
         self.assertNotEqual(
             self.edge_keys(fixed_test_set),
@@ -169,15 +154,32 @@ class LoaderStreamContractTests(unittest.TestCase):
         from src.main import build_fixed_test_set
 
         loader = make_small_loader(load_data.load_movielen)
-        np.random.seed(7)
-        online_state = np.random.get_state()
+        loader.rng = np.random.default_rng(7)
         fixed_test_set = build_fixed_test_set(loader, run_seed=7)
 
-        np.random.set_state(online_state)
         online_events = [loader.step() for _ in range(100)]
         test_keys = set(self.edge_keys(fixed_test_set))
         online_keys = set(self.edge_keys(online_events))
         self.assertTrue(test_keys.isdisjoint(online_keys))
+
+    def test_model_numpy_randomness_does_not_change_loader_events(self):
+        first = make_small_loader(load_data.load_movielen)
+        second = make_small_loader(load_data.load_movielen)
+        first.rng = np.random.default_rng(19)
+        second.rng = np.random.default_rng(19)
+
+        first_events = []
+        second_events = []
+        for _ in range(20):
+            first_events.append(first.step())
+            np.random.shuffle(np.arange(1000))
+            np.random.random(1000)
+            second_events.append(second.step())
+
+        self.assertListEqual(
+            self.edge_keys(first_events),
+            self.edge_keys(second_events),
+        )
 
 
 if __name__ == "__main__":
