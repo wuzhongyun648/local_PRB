@@ -139,6 +139,24 @@ def _log_init_graph(name, init_hops, init_topk, seeds, num_edges):
 class graph:
     def __init__(self, path):
         self.path = path
+
+    def _add_undirected_edge(self, u, v):
+        """Insert one edge and update only the affected transition columns."""
+        u, v = int(u), int(v)
+        if self.A[u, v] != 0:
+            return False
+
+        self.A[u, v] = 1
+        self.A[v, u] = 1
+        self.degree[u] += 1
+        if v != u:
+            self.degree[v] += 1
+
+        self.P[:, u] = self.A[:, u] / self.degree[u]
+        if v != u:
+            self.P[:, v] = self.A[:, v] / self.degree[v]
+        self.num_edges += 1
+        return True
     
 
 class MovieLens(graph):
@@ -181,7 +199,7 @@ class MovieLens(graph):
         self.P = P
         self.num_nodes = num_nodes
         self.num_edges = num_edges
-        self.degree = np.sum(A, axis=1) 
+        self.degree = np.asarray(A.sum(axis=1)).reshape(-1)
         _log_init_graph("MovieLens", init_hops, init_topk, seeds, num_edges)
         
     def get(self):
@@ -195,16 +213,7 @@ class MovieLens(graph):
         }
     def update(self,item_id, user_id):  
         item_node = item_id + self.num_users
-        if self.A[item_node, user_id] != 0:
-            return False
-        self.A[item_node, user_id] = 1
-        self.A[user_id, item_node] = 1
-        self.P[:, user_id] = self.A[:, user_id] / self.A[:, user_id].sum()
-        self.P[:, item_node] = self.A[:, item_node] / self.A[:, item_node].sum()
-        self.P = self.P.tocsr()
-        self.num_edges = self.A.nnz // 2
-        self.degree = np.sum(self.A, axis=1)
-        return True
+        return self._add_undirected_edge(user_id, item_node)
 
 class Amazon_fashion(graph):
     def __init__(self, path):
@@ -246,7 +255,7 @@ class Amazon_fashion(graph):
         self.P = P
         self.num_nodes = num_nodes
         self.num_edges = num_edges
-        self.degree = np.sum(A, axis=1) 
+        self.degree = np.asarray(A.sum(axis=1)).reshape(-1)
         _log_init_graph("Amazon_fashion", init_hops, init_topk, seeds, num_edges)
             
         
@@ -263,16 +272,7 @@ class Amazon_fashion(graph):
     
     def update(self,item_id, user_id):  
         item_node = item_id + self.num_users
-        if self.A[item_node, user_id] != 0:
-            return False
-        self.A[item_node, user_id] = 1
-        self.A[user_id, item_node] = 1
-        self.P[:, user_id] = self.A[:, user_id] / self.A[:, user_id].sum()
-        self.P[:, item_node] = self.A[:, item_node] / self.A[:, item_node].sum()
-        self.P = self.P.tocsr()
-        self.num_edges = self.A.nnz // 2
-        self.degree = np.sum(self.A, axis=1)
-        return True
+        return self._add_undirected_edge(user_id, item_node)
         
 class Facebook(graph):
     def __init__(self, path):
@@ -310,7 +310,7 @@ class Facebook(graph):
         self.P = P
         self.num_nodes = num_nodes
         self.num_edges = num_edges
-        self.degree = np.sum(A, axis=1)
+        self.degree = np.asarray(A.sum(axis=1)).reshape(-1)
         _log_init_graph("Facebook", init_hops, init_topk, seeds, num_edges)
         
     def get(self):
@@ -324,16 +324,7 @@ class Facebook(graph):
         }
     
     def update(self, user_id1, user_id2):  
-        if self.A[user_id1, user_id2] != 0:
-            return False
-        self.A[user_id1, user_id2] = 1
-        self.A[user_id2, user_id1] = 1
-        self.P[:, user_id1] = self.A[:, user_id1] / self.A[:, user_id1].sum()
-        self.P[:, user_id2] = self.A[:, user_id2] / self.A[:, user_id2].sum()
-        self.P = self.P.tocsr()
-        self.num_edges = self.A.nnz // 2
-        self.degree = np.sum(self.A, axis=1)
-        return True
+        return self._add_undirected_edge(user_id1, user_id2)
 
 class Grqc(graph):
     def __init__(self, path):
@@ -371,7 +362,7 @@ class Grqc(graph):
         self.P = P
         self.num_nodes = num_nodes
         self.num_edges = num_edges
-        self.degree = np.sum(A, axis=1)
+        self.degree = np.asarray(A.sum(axis=1)).reshape(-1)
         _log_init_graph("Grqc", init_hops, init_topk, seeds, num_edges)
         
     def get(self):
@@ -385,16 +376,7 @@ class Grqc(graph):
         }
     
     def update(self, user_id1, user_id2):  
-        if self.A[user_id1, user_id2] != 0:
-            return False
-        self.A[user_id1, user_id2] = 1
-        self.A[user_id2, user_id1] = 1
-        self.P[:, user_id1] = self.A[:, user_id1] / self.A[:, user_id1].sum()
-        self.P[:, user_id2] = self.A[:, user_id2] / self.A[:, user_id2].sum()
-        self.P = self.P.tocsr()
-        self.num_edges = self.A.nnz // 2
-        self.degree = np.sum(self.A, axis=1)
-        return True
+        return self._add_undirected_edge(user_id1, user_id2)
         
 class PPA(graph):
     def __init__(self, path):
@@ -443,16 +425,7 @@ class PPA(graph):
         }
     
     def update(self, u, v):  
-        if self.A[u, v] != 0:
-            return False
-        self.A[u, v] = 1
-        self.A[v, u] = 1
-        self.P[:, u] = self.A[:, u] / self.A[:, u].sum()
-        self.degree[u] = self.A[:, u].sum()
-        self.P[:, v] = self.A[:, v] / self.A[:, v].sum()
-        self.degree[v] = self.A[:, v].sum()
-        self.num_edges = self.A.nnz // 2
-        return True
+        return self._add_undirected_edge(u, v)
 
 class Collab(graph):
     def __init__(self, path):
@@ -500,16 +473,7 @@ class Collab(graph):
         }
     
     def update(self, u, v):  
-        if self.A[u, v] != 0:
-            return False
-        self.A[u, v] = 1
-        self.A[v, u] = 1
-        self.P[:, u] = self.A[:, u] / self.A[:, u].sum()
-        self.degree[u] = self.A[:, u].sum()
-        self.P[:, v] = self.A[:, v] / self.A[:, v].sum()
-        self.degree[v] = self.A[:, v].sum()
-        self.num_edges = self.A.nnz // 2
-        return True
+        return self._add_undirected_edge(u, v)
 
 class Vessel(graph):
     def __init__(self, path):
@@ -557,13 +521,4 @@ class Vessel(graph):
         }
     
     def update(self, u, v):  
-        if self.A[u, v] != 0:
-            return False
-        self.A[u, v] = 1
-        self.A[v, u] = 1
-        self.P[:, u] = self.A[:, u] / self.A[:, u].sum()
-        self.degree[u] = self.A[:, u].sum()
-        self.P[:, v] = self.A[:, v] / self.A[:, v].sum()
-        self.degree[v] = self.A[:, v].sum()
-        self.num_edges = self.A.nnz // 2
-        return True
+        return self._add_undirected_edge(u, v)

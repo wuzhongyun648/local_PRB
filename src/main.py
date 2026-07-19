@@ -119,6 +119,14 @@ def build_fixed_test_set(loader, run_seed):
     finally:
         np.random.set_state(caller_state)
 
+
+def apply_graph_update(graph_manager, *edge_args):
+    """Apply one graph update and rebuild CSR only for a newly inserted edge."""
+    edge_added = graph_manager.update(*edge_args)
+    if not edge_added:
+        return False, None
+    return True, graph_manager.P.tocsr()
+
 def get_configurations(graph_name):
     """
     Retrieves the dataset-specific configurations based on the input graph name.
@@ -418,12 +426,15 @@ def run_experiment(run_id,args, save_dir):
         if reward == 1.0 and connected_u is not None:
             if args.graph_name in ['MovieLens', 'Amazon_fashion']:
                 raw_item_id = connected_v - current_user_offset
-                graph_manager.update(raw_item_id, connected_u)
+                edge_added, updated_csr = apply_graph_update(
+                    graph_manager, raw_item_id, connected_u
+                )
             else:
-                graph_manager.update(connected_u, connected_v)
-            P_current_csr = graph_manager.P.tocsr()  
-            degree = np.array(graph_manager.degree).flatten().astype(np.int64)
-            degree[degree == 0] = 1  
+                edge_added, updated_csr = apply_graph_update(
+                    graph_manager, connected_u, connected_v
+                )
+            if edge_added:
+                P_current_csr = updated_csr
         # --- G. Net Update & Train ---
         ee_net.update(context, reward, t)
         
