@@ -25,7 +25,8 @@ def make_small_loader(loader_class):
     loader.p_d = len(loader.pos_index)
     loader.n_d = len(loader.neg_index)
     loader.U = np.arange(10, dtype=np.float64).reshape(5, 2)
-    loader.I = np.arange(20, 30, dtype=np.float64).reshape(5, 2)
+    if loader_class in (load_data.load_movielen, load_data.load_amazon_fashion):
+        loader.I = np.arange(20, 30, dtype=np.float64).reshape(5, 2)
     return loader
 
 
@@ -77,19 +78,13 @@ class SmallLoaderContractTests(unittest.TestCase):
     def test_movielens_step_contract(self):
         self.assert_loader_all_arm_positions(load_data.load_movielen)
 
-    @unittest.expectedFailure
     def test_amazon_step_contract(self):
-        """Known P0: most arm positions return a negative edge's source."""
         self.assert_loader_all_arm_positions(load_data.load_amazon_fashion)
 
-    @unittest.expectedFailure
     def test_facebook_step_contract(self):
-        """Known P0: most arm positions return a negative edge's source."""
         self.assert_loader_all_arm_positions(load_data.load_facebook)
 
-    @unittest.expectedFailure
     def test_grqc_step_contract(self):
-        """Known P0: most arm positions return a negative edge's source."""
         self.assert_loader_all_arm_positions(load_data.load_grqc)
 
 
