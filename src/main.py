@@ -79,6 +79,13 @@ METHOD_ALIASES = {
 }
 METHOD_LABEL_SUFFIX = ""
 TEST_SEED_OFFSET = 1_000_003
+ABLATION_CHOICES = (
+    "none",
+    "full_pool",
+    "legacy_rng",
+    "reference_training",
+    "directed_graph",
+)
 
 
 def parse_method(value):
@@ -145,6 +152,52 @@ def apply_graph_update_timed(graph_manager, *edge_args):
     return True, updated_csr, update_seconds, rebuild_seconds
 
 
+def apply_directed_bipartite_update_timed(graph_manager, item_id, user_id):
+    """Reproduce PRB's one-way MovieLens/Amazon graph update for ablation."""
+    update_start = time.perf_counter()
+    item_node = int(item_id) + int(graph_manager.num_users)
+    user_id = int(user_id)
+    if graph_manager.A[item_node, user_id] != 0:
+        return False, None, time.perf_counter() - update_start, 0.0
+    graph_manager.A[item_node, user_id] = 1
+    graph_manager.degree[item_node] += 1
+    column_sum = graph_manager.A[:, user_id].sum()
+    graph_manager.P[:, user_id] = graph_manager.A[:, user_id] / column_sum
+    graph_manager.num_edges = graph_manager.A.nnz
+    update_seconds = time.perf_counter() - update_start
+    rebuild_start = time.perf_counter()
+    updated_csr = graph_manager.P.tocsr()
+    return (
+        True,
+        updated_csr,
+        update_seconds,
+        time.perf_counter() - rebuild_start,
+    )
+
+
+def configure_ablation_loader(loader, ablation, seed):
+    """Change exactly one MovieLens stream factor for diagnostic runs."""
+    if ablation == "full_pool":
+        positive = loader.m[loader.m[:, 2] == 1, :2].astype(np.int64)
+        negative = loader.m[loader.m[:, 2] == -1, :2].astype(np.int64)
+        loader.pos_index = positive
+        loader.neg_index = negative
+        loader.p_d = len(positive)
+        loader.n_d = len(negative)
+        loader.rng = np.random.default_rng(seed)
+    elif ablation == "legacy_rng":
+        loader.rng = np.random.RandomState(seed)
+    return loader
+
+
+def should_train_main(t, ablation):
+    if ablation == "reference_training":
+        return t % (10 if t < 1000 else 100) == 0
+    return t % (
+        TRAIN_EVERY_BEFORE_2000 if t < 2000 else TRAIN_EVERY_AFTER_2000
+    ) == 0
+
+
 def selected_graph_edge(context_ind, arm, target_offset=0):
     """Return canonical graph-node endpoints for the selected candidate."""
     raw_u, raw_v = context_ind[int(arm)]
@@ -198,6 +251,12 @@ def parse_arguments():
     parser.add_argument('--init_hops', type=int, default=0, help='H-hop warm-start radius for the initial graph; 0 keeps the default graph')
     parser.add_argument('--init_topk', type=int, default=0, help='Use top-k highest-degree seed nodes for warm-start; 0 disables warm-start')
     parser.add_argument('--dyn_check_every', type=int, default=0, help='Compare DYN-APPR with scratch APPR every N rounds; 0 disables checks')
+    parser.add_argument(
+        '--ablation',
+        choices=ABLATION_CHOICES,
+        default='none',
+        help='Change one protocol factor for controlled diagnostic runs',
+    )
     
     parser.add_argument('--init_edges', type=int, default=None, help='Limit the number of initial edges for PPA/Vessel')
     parser.add_argument('--hidden', type=int, default=DEFAULT_HIDDEN, help='EE-Net exploitation hidden width (Network_exploitation)')
@@ -245,9 +304,15 @@ def run_experiment(run_id,args, save_dir):
         split="online",
         split_seed=args.split_seed,
     )
+    configure_ablation_loader(bandit_loader, args.ablation, seed)
+    event_dataset_name = (
+        args.graph_name
+        if args.ablation == "none"
+        else f"{args.graph_name}__ablation_{args.ablation}"
+    )
     event_path = canonical_stream_path(
         os.path.join(RESULTS_DIR, "event_streams"),
-        args.graph_name,
+        event_dataset_name,
         "online",
         seed,
         args.split_seed,
@@ -256,7 +321,7 @@ def run_experiment(run_id,args, save_dir):
     )
     event_stream_t0 = time.perf_counter()
     online_stream = load_or_generate_event_stream(
-        bandit_loader, event_path, args.T, args.graph_name, seed
+        bandit_loader, event_path, args.T, event_dataset_name, seed
     )
     event_stream_init_seconds = time.perf_counter() - event_stream_t0
     print(f"-> Event stream: {online_stream.event_hash[:12]} ({event_path})", flush=True)
@@ -512,9 +577,16 @@ def run_experiment(run_id,args, save_dir):
         if reward == 1.0 and connected_u is not None:
             if args.graph_name in ['MovieLens', 'Amazon_fashion']:
                 raw_item_id = connected_v - current_user_offset
-                edge_added, updated_csr, update_dt, rebuild_dt = apply_graph_update_timed(
-                    graph_manager, raw_item_id, connected_u
-                )
+                if args.ablation == "directed_graph":
+                    edge_added, updated_csr, update_dt, rebuild_dt = (
+                        apply_directed_bipartite_update_timed(
+                            graph_manager, raw_item_id, connected_u
+                        )
+                    )
+                else:
+                    edge_added, updated_csr, update_dt, rebuild_dt = apply_graph_update_timed(
+                        graph_manager, raw_item_id, connected_u
+                    )
             else:
                 edge_added, updated_csr, update_dt, rebuild_dt = apply_graph_update_timed(
                     graph_manager, connected_u, connected_v
@@ -533,16 +605,10 @@ def run_experiment(run_id,args, save_dir):
         
         loss1, loss2 = 0.0, 0.0
         train_dt = 0.0
-        if  t < 2000:
-            if t % TRAIN_EVERY_BEFORE_2000 == 0:
-                train_t0 = time.perf_counter()
-                loss1, loss2 = ee_net.train(t)
-                train_dt = time.perf_counter() - train_t0
-        else:
-            if t % TRAIN_EVERY_AFTER_2000 == 0:
-                train_t0 = time.perf_counter()
-                loss1, loss2 = ee_net.train(t)
-                train_dt = time.perf_counter() - train_t0
+        if should_train_main(t, args.ablation):
+            train_t0 = time.perf_counter()
+            loss1, loss2 = ee_net.train(t)
+            train_dt = time.perf_counter() - train_t0
             
         # --- H. Recording ---
         step_end = time.time()
@@ -604,10 +670,12 @@ def main():
         param_str = f"powT{args.power_T}"
     ks_resolved = utils.resolve_ee_net_kernel_size(args.graph_name, args.kernel_size)
     method_label = f"{args.method}{METHOD_LABEL_SUFFIX}"
+    ablation_suffix = "" if args.ablation == "none" else f"_abl{args.ablation}"
     folder_name = (
         f"{args.graph_name}_{method_label}_alpha{args.alpha}_{param_str}_"
         f"T{args.T}_k{args.n_neg + 1}_initH{args.init_hops}_initK{args.init_topk}_"
-        f"lr1{args.lr1}_lr2{args.lr2}_h{args.hidden}_ks{ks_resolved}_{current_time}"
+        f"lr1{args.lr1}_lr2{args.lr2}_h{args.hidden}_ks{ks_resolved}"
+        f"{ablation_suffix}_{current_time}"
     )
     
     
