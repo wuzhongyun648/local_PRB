@@ -20,7 +20,7 @@ def power_iteration(P: sp.spmatrix, alpha: float, h: np.ndarray, t: int) -> np.n
     return v
 
 @njit(cache=True)
-def _appr_with_stats(num_nodes, indptr, indices, degree, h, alpha, eps):
+def appr(num_nodes, indptr, indices, degree, h, alpha, eps):
     front = 0
     rear = 0
     queue = np.zeros(num_nodes + 1,dtype = np.int64)
@@ -28,7 +28,6 @@ def _appr_with_stats(num_nodes, indptr, indices, degree, h, alpha, eps):
     p = np.zeros(num_nodes)
     r = np.zeros(num_nodes)
     eps_vec = eps * degree
-    push_count = 0
     
     for idx in range(num_nodes):
         val = h[idx]
@@ -45,7 +44,6 @@ def _appr_with_stats(num_nodes, indptr, indices, degree, h, alpha, eps):
         r_val = r[u]
         if eps_vec[u] > np.abs(r[u]):
             continue
-        push_count += 1
         p[u] += r_val * (1. - alpha) 
         r[u] = 0.0
         push_val = alpha * r_val / degree[u]
@@ -56,19 +54,7 @@ def _appr_with_stats(num_nodes, indptr, indices, degree, h, alpha, eps):
                 rear = (rear + 1) % (num_nodes + 1)
                 q_mark[v] = True
         
-    return p, push_count
-
-
-def appr_with_stats(num_nodes, indptr, indices, degree, h, alpha, eps):
-    """Return the APPR vector and number of local residual pushes."""
-    return _appr_with_stats(num_nodes, indptr, indices, degree, h, alpha, eps)
-
-
-def appr(num_nodes, indptr, indices, degree, h, alpha, eps):
-    """Compatibility wrapper returning only the APPR vector."""
-    return _appr_with_stats(
-        num_nodes, indptr, indices, degree, h, alpha, eps
-    )[0]
+    return p
 
 
 def generate_random_graph(n_nodes, density=0.1):
