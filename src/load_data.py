@@ -57,6 +57,14 @@ def _partition_edges(edges, seed=DEFAULT_SPLIT_SEED, undirected=False):
 
 
 class _SplitLoaderMixin:
+    def context_from_edges(self, edges):
+        """Materialize feature contexts for a compact candidate-edge array."""
+        edges = np.asarray(edges, dtype=np.int64).reshape(-1, 2)
+        right_features = self.I if hasattr(self, "I") else self.U
+        return np.asarray(
+            [np.concatenate((self.U[u], right_features[v])) for u, v in edges]
+        )
+
     def _configure_splits(
         self,
         positive_edges,
@@ -129,17 +137,13 @@ class load_movielen(_SplitLoaderMixin):
         neg = self.neg_index[self.rng.choice(self.n_d, self.n_neg, replace=False)]
         X_ind = np.concatenate((neg[:arm], [pos], neg[arm:]), axis=0) 
         
-        X = []
-        for i, ind in enumerate(X_ind):
-            X.append(np.concatenate((self.U[ind[0]], self.I[ind[1]]))) 
-            if i == arm: 
-                user = ind[0]
-                item = ind[1]
+        X = self.context_from_edges(X_ind)
+        user, item = X_ind[arm]
                 
         rwd = np.zeros(self.n_arm)
         rwd[arm] = 1 
         
-        return np.array(X), X_ind, rwd, arm, user, item
+        return X, X_ind, rwd, arm, user, item
     
 class load_facebook(_SplitLoaderMixin):
     def __init__(self, n_neg=9, seed=0, split="online", split_seed=DEFAULT_SPLIT_SEED):
@@ -174,14 +178,11 @@ class load_facebook(_SplitLoaderMixin):
         neg = self.neg_index[self.rng.choice(self.n_d, self.n_neg, replace=False)]
         X_ind = np.concatenate((neg[:arm], [pos], neg[arm:]), axis=0) 
         # print("X_ind is:",X_ind)
-        X = []
-        for i,ind in enumerate(X_ind):
-            #X.append(np.sqrt(np.multiply(self.I[ind], u_fea)))
-            X.append(np.concatenate((self.U[ind[0]], self.U[ind[1]]))) 
+        X = self.context_from_edges(X_ind)
         # print("X is \n",X)
         rwd = np.zeros(self.n_arm)
         rwd[arm] = 1
-        return np.array(X),X_ind, rwd, arm, user, item  # arm is the one that randomly picked up and settled to 1
+        return X, X_ind, rwd, arm, user, item  # arm is the one that randomly picked up and settled to 1
     
     def testing_dataset(self):
         test_data = []
@@ -224,14 +225,11 @@ class load_grqc(_SplitLoaderMixin):
         neg = self.neg_index[self.rng.choice(self.n_d, self.n_neg, replace=False)]
         X_ind = np.concatenate((neg[:arm], [pos], neg[arm:]), axis=0) 
         # print("X_ind is:",X_ind)
-        X = []
-        for i,ind in enumerate(X_ind):
-            #X.append(np.sqrt(np.multiply(self.I[ind], u_fea)))
-            X.append(np.concatenate((self.U[ind[0]], self.U[ind[1]]))) 
+        X = self.context_from_edges(X_ind)
         # print("X is \n",X)
         rwd = np.zeros(self.n_arm)
         rwd[arm] = 1
-        return np.array(X),X_ind, rwd, arm, user, item  # arm is the one that randomly picked up and settled to 1
+        return X, X_ind, rwd, arm, user, item  # arm is the one that randomly picked up and settled to 1
     def testing_dataset(self):
         test_data = []
         for _ in range(100):
@@ -275,13 +273,10 @@ class load_amazon_fashion(_SplitLoaderMixin):
         neg = self.neg_index[self.rng.choice(self.n_d, self.n_neg, replace=False)]
         X_ind = np.concatenate((neg[:arm], [pos], neg[arm:]), axis=0) 
         # print("X_ind is:",X_ind)
-        X = []
-        for i,ind in enumerate(X_ind):
-            #X.append(np.sqrt(np.multiply(self.I[ind], u_fea)))
-            X.append(np.concatenate((self.U[ind[0]], self.I[ind[1]]))) 
+        X = self.context_from_edges(X_ind)
         rwd = np.zeros(self.n_arm)
         rwd[arm] = 1
-        return np.array(X),X_ind, rwd, arm, user, item  # arm is the one that randomly picked up and settled to 1
+        return X, X_ind, rwd, arm, user, item  # arm is the one that randomly picked up and settled to 1
     def testing_dataset(self):
         test_data = []
         for _ in range(100):
@@ -446,19 +441,13 @@ class _OGBBaseLoader(_SplitLoaderMixin):
         neg = np.array(neg_list) # shape (9, 2)
         X_ind = np.concatenate((neg[:arm], [pos], neg[arm:]), axis=0) 
         
-        X = []
-        for i, ind in enumerate(X_ind):
-            u, v = ind[0], ind[1]
-            X.append(np.concatenate((self.U[u], self.I[v]))) 
-            
-            if i == arm:
-                user = u
-                item = v
+        X = self.context_from_edges(X_ind)
+        user, item = X_ind[arm]
                 
         rwd = np.zeros(self.n_arm)
         rwd[arm] = 1.0
         
-        return np.array(X), X_ind, rwd, arm, user, item
+        return X, X_ind, rwd, arm, user, item
     def testing_dataset(self):
         test_data = []
         for _ in range(100):
@@ -518,16 +507,10 @@ class load_ogb_vessel(_OGBBaseLoader):
         pos_entry = np.array([[u, v]])
         X_ind = np.concatenate((neg[:arm], pos_entry, neg[arm:]), axis=0)
         
-        X = []
-        for i, idx_pair in enumerate(X_ind):
-            curr_u, curr_v = idx_pair[0], idx_pair[1]
-            X.append(np.concatenate((self.U[curr_u], self.I[curr_v])))
-            
-            if i == arm:
-                target_user = curr_u
-                target_item = curr_v
+        X = self.context_from_edges(X_ind)
+        target_user, target_item = X_ind[arm]
         
         rwd = np.zeros(self.n_arm)
         rwd[arm] = 1.0
         
-        return np.array(X), X_ind, rwd, arm, target_user, target_item
+        return X, X_ind, rwd, arm, target_user, target_item

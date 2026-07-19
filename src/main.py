@@ -29,6 +29,11 @@ from src.EENet import EE_Net
 from src import ppr_solver
 from src import utils
 from src.dynamic_appr import DynamicAPPR
+from src.event_stream import (
+    canonical_stream_path,
+    generate_event_stream,
+    load_or_generate_event_stream,
+)
 from src.experiment_configs import (
     DEFAULT_EE_NET_POOL_STEP,
     DEFAULT_HIDDEN,
@@ -112,7 +117,10 @@ def build_fixed_test_set(loader, run_seed):
     """Build a deterministic test set from the loader's independent test split."""
     test_seed = (int(run_seed) + TEST_SEED_OFFSET) % (2**32)
     test_loader = loader.for_split("test", seed=test_seed)
-    return test_loader.testing_dataset()
+    stream = generate_event_stream(
+        test_loader, rounds=100, dataset=getattr(loader, "dataset_name", "test"), seed=test_seed
+    )
+    return [stream.materialize(test_loader, index) for index in range(len(stream))]
 
 
 def apply_graph_update(graph_manager, *edge_args):
@@ -220,6 +228,19 @@ def run_experiment(run_id,args, save_dir):
         split="online",
         split_seed=args.split_seed,
     )
+    event_path = canonical_stream_path(
+        os.path.join(RESULTS_DIR, "event_streams"),
+        args.graph_name,
+        "online",
+        seed,
+        args.split_seed,
+        bandit_loader.n_arm,
+        args.T,
+    )
+    online_stream = load_or_generate_event_stream(
+        bandit_loader, event_path, args.T, args.graph_name, seed
+    )
+    print(f"-> Event stream: {online_stream.event_hash[:12]} ({event_path})", flush=True)
     print(f"-> Loading Graph from {data_path} ...")
     graph_manager = GraphClass(data_path)
     if args.graph_name in ['MovieLens', 'Amazon_fashion']:
@@ -324,7 +345,7 @@ def run_experiment(run_id,args, save_dir):
         # --- A. Bandit Step (Context) ---
         online_step_t0 = time.perf_counter()
         
-        step_result = bandit_loader.step()
+        step_result = online_stream.materialize(bandit_loader, t)
         context, context_ind, rwd, _, _, _ = step_result
             
         # --- B. Neural Net Predict ---
@@ -474,6 +495,8 @@ def run_experiment(run_id,args, save_dir):
     time_acc_save_path = os.path.join(save_dir, f"worker_{run_id}_TimeAcc.npy")
     np.save(time_acc_save_path, np.array(time_acc_results))
     print(f"-> Saved Time-Accuracy results to {time_acc_save_path}")
+    timing_breakdown['event_hash'] = online_stream.event_hash
+    timing_breakdown['event_stream_path'] = event_path
     return np.array(results_list), timing_breakdown
 
 def main():
