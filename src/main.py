@@ -127,6 +127,12 @@ def apply_graph_update(graph_manager, *edge_args):
         return False, None
     return True, graph_manager.P.tocsr()
 
+
+def selected_graph_edge(context_ind, arm, target_offset=0):
+    """Return canonical graph-node endpoints for the selected candidate."""
+    raw_u, raw_v = context_ind[int(arm)]
+    return int(raw_u), int(raw_v) + int(target_offset)
+
 def get_configurations(graph_name):
     """
     Retrieves the dataset-specific configurations based on the input graph name.
@@ -333,11 +339,7 @@ def run_experiment(run_id,args, save_dir):
         online_step_t0 = time.perf_counter()
         
         step_result = loader_step()
-        if len(step_result) == 6:
-            context, context_ind, rwd, _, user_id, _ = step_result
-        else:
-            # OGB 
-            context, context_ind, rwd, _, user_id, _ = step_result
+        context, context_ind, rwd, _, _, _ = step_result
             
         # --- B. Neural Net Predict ---
         _, h_observe = ee_net.predict(context, t)
@@ -415,8 +417,11 @@ def run_experiment(run_id,args, save_dir):
         
         if rwd[final_arm] == 1.0:
             reward = 1.0
-            connected_u = user_id
-            connected_v = cand_graph_ids[final_arm]
+            connected_u, connected_v = selected_graph_edge(
+                context_ind,
+                final_arm,
+                target_offset=current_user_offset,
+            )
         else:
             reward = 0.0
             connected_u = None
