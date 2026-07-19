@@ -109,14 +109,10 @@ def build_ee_net(dim, n_arm, args, kernel_size):
 
 
 def build_fixed_test_set(loader, run_seed):
-    """Build a deterministic test set without consuming the online RNG stream."""
+    """Build a deterministic test set from the loader's independent test split."""
     test_seed = (int(run_seed) + TEST_SEED_OFFSET) % (2**32)
-    online_rng = loader.rng
-    try:
-        loader.rng = np.random.default_rng(test_seed)
-        return loader.testing_dataset()
-    finally:
-        loader.rng = online_rng
+    test_loader = loader.for_split("test", seed=test_seed)
+    return test_loader.testing_dataset()
 
 
 def apply_graph_update(graph_manager, *edge_args):
@@ -175,6 +171,7 @@ def parse_arguments():
     parser.add_argument('--workers', type=int, default=DEFAULT_WORKERS, help='Number of multiprocessing workers')
     parser.add_argument('--runs', type=int, default=DEFAULT_RUNS, help='Total number of independent runs')
     parser.add_argument('--seed', type=int, default=0)
+    parser.add_argument('--split_seed', type=int, default=1729, help='Dataset split seed shared by all runs and methods')
     parser.add_argument('--n_neg', type=int, default=DEFAULT_N_NEG, help='Number of negative candidates per round (k = n_neg + 1)')
     parser.add_argument('--init_hops', type=int, default=0, help='H-hop warm-start radius for the initial graph; 0 keeps the default graph')
     parser.add_argument('--init_topk', type=int, default=0, help='Use top-k highest-degree seed nodes for warm-start; 0 disables warm-start')
@@ -217,7 +214,12 @@ def run_experiment(run_id,args, save_dir):
     
     print(f">>> [Worker {os.getpid()}] Starting Run {run_id}...", flush=True)
     LoaderClass, GraphClass, data_path, n_users, n_items = get_configurations(args.graph_name)
-    bandit_loader = LoaderClass(n_neg=args.n_neg, seed=seed)
+    bandit_loader = LoaderClass(
+        n_neg=args.n_neg,
+        seed=seed,
+        split="online",
+        split_seed=args.split_seed,
+    )
     print(f"-> Loading Graph from {data_path} ...")
     graph_manager = GraphClass(data_path)
     if args.graph_name in ['MovieLens', 'Amazon_fashion']:

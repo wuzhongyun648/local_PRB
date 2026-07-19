@@ -1,4 +1,5 @@
 import gc
+import copy
 import os
 
 import numpy as np
@@ -19,14 +20,83 @@ def _safe_load_global(*args, **kwargs):
 torch.load = _safe_load_global
 
 
-class load_movielen:
-    def __init__(self, n_neg=9, seed=0):
+SPLIT_NAMES = ("online", "validation", "test")
+DEFAULT_SPLIT_SEED = 1729
+
+
+def _partition_edges(edges, seed=DEFAULT_SPLIT_SEED, undirected=False):
+    """Partition edge groups deterministically without cross-split overlap."""
+    edges = np.asarray(edges, dtype=np.int64).reshape(-1, 2)
+    if len(edges) < 3:
+        raise ValueError("at least three edges are required for three data splits")
+
+    keys = np.sort(edges, axis=1) if undirected else edges
+    _, group_ids = np.unique(keys, axis=0, return_inverse=True)
+    groups = np.unique(group_ids)
+    if len(groups) < 3:
+        raise ValueError("at least three unique edge groups are required")
+
+    rng = np.random.default_rng(seed)
+    groups = rng.permutation(groups)
+    validation_size = max(1, int(0.1 * len(groups)))
+    test_size = max(1, int(0.1 * len(groups)))
+    online_size = len(groups) - validation_size - test_size
+    if online_size < 1:
+        online_size, validation_size, test_size = 1, 1, len(groups) - 2
+    train_end = online_size
+    validation_end = online_size + validation_size
+    group_splits = {
+        "online": groups[:train_end],
+        "validation": groups[train_end:validation_end],
+        "test": groups[validation_end:],
+    }
+    return {
+        name: edges[np.isin(group_ids, selected_groups)]
+        for name, selected_groups in group_splits.items()
+    }
+
+
+class _SplitLoaderMixin:
+    def _configure_splits(
+        self,
+        positive_edges,
+        negative_edges,
+        split,
+        seed,
+        split_seed,
+        undirected=False,
+    ):
+        self._positive_splits = _partition_edges(
+            positive_edges, seed=split_seed, undirected=undirected
+        )
+        self._negative_splits = _partition_edges(
+            negative_edges, seed=split_seed + 1, undirected=undirected
+        )
+        self._activate_split(split, seed)
+
+    def _activate_split(self, split, seed):
+        if split not in SPLIT_NAMES:
+            raise ValueError(f"unknown split {split!r}; expected one of {SPLIT_NAMES}")
+        self.split = split
+        self.rng = np.random.default_rng(seed)
+        self.pos_index = self._positive_splits[split]
+        self.neg_index = self._negative_splits[split]
+        self.p_d = len(self.pos_index)
+        self.n_d = len(self.neg_index)
+
+    def for_split(self, split, seed):
+        clone = copy.copy(self)
+        clone._activate_split(split, seed)
+        return clone
+
+
+class load_movielen(_SplitLoaderMixin):
+    def __init__(self, n_neg=9, seed=0, split="online", split_seed=DEFAULT_SPLIT_SEED):
         # Fetch data
         self.m = np.load(os.path.join(DATA_DIR, "MovieLens/movie_2000users_10000items_entry.npy"))
         self.U = np.load(os.path.join(DATA_DIR, "MovieLens/movie_2000users_10000items_features.npy"))
         self.I = np.load(os.path.join(DATA_DIR, "MovieLens/movie_10000items_2000users_features.npy"))
         self.n_neg = n_neg
-        self.rng = np.random.default_rng(seed)
         self.n_arm = self.n_neg + 1
         self.dim = 20
         self.pos_index = []
@@ -37,11 +107,14 @@ class load_movielen:
             else: # i[2] == -1
                 self.neg_index.append((i[0], i[1]))   
             
-        self.p_d = len(self.pos_index)
-        self.n_d = len(self.neg_index)
-        # print('self.p_d and self.n_d is:',self.p_d, self.n_d)
-        self.pos_index = np.array(self.pos_index)
-        self.neg_index = np.array(self.neg_index)
+        self._configure_splits(
+            self.pos_index,
+            self.neg_index,
+            split,
+            seed,
+            split_seed,
+            undirected=False,
+        )
 
     def testing_dataset(self):
         test_data = []
@@ -68,13 +141,12 @@ class load_movielen:
         
         return np.array(X), X_ind, rwd, arm, user, item
     
-class load_facebook:
-    def __init__(self, n_neg=9, seed=0):
+class load_facebook(_SplitLoaderMixin):
+    def __init__(self, n_neg=9, seed=0, split="online", split_seed=DEFAULT_SPLIT_SEED):
         # Fetch data
         self.m = np.load(os.path.join(DATA_DIR, "Facebook/facebook_combined_ALLusers_entry.npy"))
         self.U = np.load(os.path.join(DATA_DIR, "Facebook/facebook_combined_ALLusers_features.npy"))
         self.n_neg = n_neg
-        self.rng = np.random.default_rng(seed)
         self.n_arm = self.n_neg + 1
         self.dim = 20
         self.pos_index = []
@@ -85,11 +157,14 @@ class load_facebook:
             else: # i[2] == -1
                 self.neg_index.append((i[0], i[1]))   
             
-        self.p_d = len(self.pos_index)
-        self.n_d = len(self.neg_index)
-        # print('self.p_d and self.n_d is:',self.p_d, self.n_d)
-        self.pos_index = np.array(self.pos_index)
-        self.neg_index = np.array(self.neg_index)
+        self._configure_splits(
+            self.pos_index,
+            self.neg_index,
+            split,
+            seed,
+            split_seed,
+            undirected=True,
+        )
 
     def step(self):        
         arm = self.rng.choice(self.n_arm)
@@ -116,13 +191,12 @@ class load_facebook:
         return test_data
 
 
-class load_grqc:    
-    def __init__(self, n_neg=9, seed=0):
+class load_grqc(_SplitLoaderMixin):
+    def __init__(self, n_neg=9, seed=0, split="online", split_seed=DEFAULT_SPLIT_SEED):
         # Fetch data
         self.m = np.load(os.path.join(DATA_DIR, "GrQc/Insert/GrQc_ALLusers_entry.npy"))
         self.U = np.load(os.path.join(DATA_DIR, "GrQc/GrQc_ALLusers_features.npy"))
         self.n_neg = n_neg
-        self.rng = np.random.default_rng(seed)
         self.n_arm = self.n_neg + 1
         self.dim = 20
         self.pos_index = []
@@ -133,11 +207,14 @@ class load_grqc:
             else: # i[2] == -1
                 self.neg_index.append((i[0], i[1]))   
             
-        self.p_d = len(self.pos_index)
-        self.n_d = len(self.neg_index)
-        # print('self.p_d and self.n_d is:',self.p_d, self.n_d)
-        self.pos_index = np.array(self.pos_index)
-        self.neg_index = np.array(self.neg_index)
+        self._configure_splits(
+            self.pos_index,
+            self.neg_index,
+            split,
+            seed,
+            split_seed,
+            undirected=True,
+        )
         
     def step(self):        
         arm = self.rng.choice(self.n_arm)
@@ -163,14 +240,13 @@ class load_grqc:
         return test_data
 
 
-class load_amazon_fashion:
-    def __init__(self, n_neg=9, seed=0):
+class load_amazon_fashion(_SplitLoaderMixin):
+    def __init__(self, n_neg=9, seed=0, split="online", split_seed=DEFAULT_SPLIT_SEED):
         # Fetch data
         self.m = np.load(os.path.join(DATA_DIR, "Amazon_fashion/new/amazon_fashion_4000users_entry.npy"))
         self.U = np.load(os.path.join(DATA_DIR, "Amazon_fashion/new/amazon_fashion_4000users_4000items_features.npy"))
         self.I = np.load(os.path.join(DATA_DIR, "Amazon_fashion/new/amazon_fashion_4000items_4000users_features.npy"))
         self.n_neg = n_neg
-        self.rng = np.random.default_rng(seed)
         self.n_arm = self.n_neg + 1
         self.dim = 20
         self.pos_index = []
@@ -181,11 +257,14 @@ class load_amazon_fashion:
             else:
                 self.neg_index.append((i[0], i[1]))   
             
-        self.p_d = len(self.pos_index)
-        self.n_d = len(self.neg_index)
-        print(self.p_d, self.n_d)
-        self.pos_index = np.array(self.pos_index)
-        self.neg_index = np.array(self.neg_index)
+        self._configure_splits(
+            self.pos_index,
+            self.neg_index,
+            split,
+            seed,
+            split_seed,
+            undirected=False,
+        )
 
 
     def step(self):        
@@ -220,8 +299,53 @@ try:
 except ImportError:
     HAS_OGB = False
 
-class _OGBBaseLoader:
-    def __init__(self, dataset_name, n_pos=1, n_neg=9, is_directed=False, need_norm=True, seed=0):
+def _ogb_positive_edges(split_entry):
+    def to_numpy(value):
+        if hasattr(value, 'cpu'):
+            value = value.cpu()
+        if hasattr(value, 'detach'):
+            value = value.detach()
+        if hasattr(value, 'numpy'):
+            return value.numpy()
+        return np.asarray(value)
+
+    if 'edge' in split_entry:
+        return to_numpy(split_entry['edge']).astype(np.int64)
+    if 'source_node' in split_entry:
+        return np.stack(
+            [
+                to_numpy(split_entry['source_node']),
+                to_numpy(split_entry['target_node']),
+            ],
+            axis=1,
+        ).astype(np.int64)
+    if 'edge_index' in split_entry:
+        return to_numpy(split_entry['edge_index']).T.astype(np.int64)
+    raise ValueError("unsupported OGB positive-edge format")
+
+
+def _edge_adjacency(num_nodes, edges, undirected=True):
+    edges = np.asarray(edges, dtype=np.int64).reshape(-1, 2)
+    rows, cols = edges[:, 0], edges[:, 1]
+    if undirected:
+        rows, cols = np.concatenate([rows, cols]), np.concatenate([cols, rows])
+    data = np.ones(len(rows), dtype=np.bool_)
+    return sp.csr_matrix((data, (rows, cols)), shape=(num_nodes, num_nodes))
+
+
+class _OGBBaseLoader(_SplitLoaderMixin):
+    def __init__(
+        self,
+        dataset_name,
+        n_pos=1,
+        n_neg=9,
+        is_directed=False,
+        need_norm=True,
+        seed=0,
+        split="online",
+        split_seed=DEFAULT_SPLIT_SEED,
+    ):
+        del split_seed
         if not HAS_OGB:
             raise ImportError("Please install ogb: pip install ogb")
             
@@ -259,41 +383,55 @@ class _OGBBaseLoader:
             self.dim = self.node_feat.shape[1] * 2
             del raw_feat, feat
             gc.collect()
-        rows, cols = [], []
-        for split in ['train', 'valid', 'test']:
-            if split not in split_edge: continue
-            edge = split_edge[split]
-            if 'edge' in edge: e = to_numpy(edge['edge'])
-            elif 'source_node' in edge: 
-                src = to_numpy(edge['source_node'])
-                dst = to_numpy(edge['target_node'])
-                e = np.stack([src, dst], axis=1)
-            elif 'edge_index' in edge: e = to_numpy(edge['edge_index']).T
-            else: continue
-            rows.append(e[:, 0])
-            cols.append(e[:, 1])
-            
-        all_rows = np.concatenate(rows).astype(np.int32)
-        all_cols = np.concatenate(cols).astype(np.int32)
-        data = np.ones(len(all_rows), dtype=np.bool_) 
-        self.adj_gt = sp.csr_matrix((data, (all_rows, all_cols)), shape=(self.num_nodes, self.num_nodes))
-        
-
-        train_edge = split_edge['train']
-        if 'edge' in train_edge: self.pos_index = to_numpy(train_edge['edge'])
-        elif 'source_node' in train_edge: 
-            src = to_numpy(train_edge['source_node'])
-            dst = to_numpy(train_edge['target_node'])
-            self.pos_index = np.stack([src, dst], axis=1)
-        elif 'edge_index' in train_edge: self.pos_index = to_numpy(train_edge['edge_index']).T
-        
-        self.p_d = len(self.pos_index)
+        self._positive_splits = {
+            "online": _ogb_positive_edges(split_edge['train']),
+            "validation": _ogb_positive_edges(split_edge['valid']),
+            "test": _ogb_positive_edges(split_edge['test']),
+        }
+        self._visible_edge_splits = {
+            "online": (self._positive_splits["online"],),
+            "validation": (
+                self._positive_splits["online"],
+                self._positive_splits["validation"],
+            ),
+            "test": (
+                self._positive_splits["online"],
+                self._positive_splits["validation"],
+                self._positive_splits["test"],
+            ),
+        }
+        # OGB graphs can be very large.  Build only the active split's
+        # false-negative filter instead of retaining three CSR matrices.
+        self._adjacency_cache = {}
+        self._activate_split(split, seed)
         
         self.U = self.node_feat
         self.I = self.node_feat
         
         del split_edge, dataset, graph
         gc.collect()
+
+    def _activate_split(self, split, seed):
+        if split not in SPLIT_NAMES:
+            raise ValueError(f"unknown split {split!r}; expected one of {SPLIT_NAMES}")
+        self.split = split
+        self.rng = np.random.default_rng(seed)
+        self.pos_index = self._positive_splits[split]
+        self.p_d = len(self.pos_index)
+        if split not in self._adjacency_cache:
+            visible_edges = np.concatenate(self._visible_edge_splits[split], axis=0)
+            self._adjacency_cache[split] = _edge_adjacency(
+                self.num_nodes, visible_edges, undirected=not self.is_directed
+            )
+        self.adj_gt = self._adjacency_cache[split]
+
+    def for_split(self, split, seed):
+        clone = copy.copy(self)
+        # Do not let a short-lived test clone retain or mutate the online
+        # loader's potentially huge adjacency cache.
+        clone._adjacency_cache = {}
+        clone._activate_split(split, seed)
+        return clone
 
     def step(self):
         arm = self.rng.choice(self.n_arm)
@@ -329,16 +467,16 @@ class _OGBBaseLoader:
         return test_data
 
 class load_ogb_collab(_OGBBaseLoader):
-    def __init__(self, n_neg=9, seed=0):
-        super().__init__('ogbl-collab', n_pos=1, n_neg=n_neg, is_directed=False, need_norm=False, seed=seed)
+    def __init__(self, n_neg=9, seed=0, split="online", split_seed=DEFAULT_SPLIT_SEED):
+        super().__init__('ogbl-collab', n_pos=1, n_neg=n_neg, is_directed=False, need_norm=False, seed=seed, split=split, split_seed=split_seed)
 
 class load_ogb_ppa(_OGBBaseLoader):
-    def __init__(self, n_neg=9, seed=0):
-        super().__init__('ogbl-ppa', n_pos=1, n_neg=n_neg, is_directed=False, need_norm=True, seed=seed)
+    def __init__(self, n_neg=9, seed=0, split="online", split_seed=DEFAULT_SPLIT_SEED):
+        super().__init__('ogbl-ppa', n_pos=1, n_neg=n_neg, is_directed=False, need_norm=True, seed=seed, split=split, split_seed=split_seed)
 
 class load_ogb_vessel(_OGBBaseLoader):
-    def __init__(self, n_neg=9, seed=0):
-        super().__init__('ogbl-vessel', n_pos=1, n_neg=n_neg, is_directed=False, need_norm=True, seed=seed)
+    def __init__(self, n_neg=9, seed=0, split="online", split_seed=DEFAULT_SPLIT_SEED):
+        super().__init__('ogbl-vessel', n_pos=1, n_neg=n_neg, is_directed=False, need_norm=True, seed=seed, split=split, split_seed=split_seed)
         
         self.U = self.node_feat
         self.I = self.node_feat

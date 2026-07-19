@@ -30,6 +30,27 @@ def make_small_loader(loader_class):
     return loader
 
 
+def make_split_small_loader(loader_class, seed=7):
+    loader = loader_class.__new__(loader_class)
+    loader.n_neg = 2
+    loader.n_arm = 3
+    loader.dim = 4
+    loader.U = np.arange(400, dtype=np.float64).reshape(200, 2)
+    if loader_class in (load_data.load_movielen, load_data.load_amazon_fashion):
+        loader.I = np.arange(400, 800, dtype=np.float64).reshape(200, 2)
+    positive_edges = np.array([[i, i + 1] for i in range(30)], dtype=np.int64)
+    negative_edges = np.array([[i, i + 100] for i in range(30)], dtype=np.int64)
+    loader._configure_splits(
+        positive_edges,
+        negative_edges,
+        split="online",
+        seed=seed,
+        split_seed=1729,
+        undirected=False,
+    )
+    return loader
+
+
 class DeterministicRNG:
     def __init__(self, positive_arm, integer_values=()):
         self.positive_arm = positive_arm
@@ -135,11 +156,14 @@ class LoaderStreamContractTests(unittest.TestCase):
             for result in results
         ]
 
+    @staticmethod
+    def positive_edge_keys(results):
+        return {(int(result[4]), int(result[5])) for result in results}
+
     def test_fixed_test_events_do_not_replay_online_prefix(self):
         from src.main import build_fixed_test_set
 
-        loader = make_small_loader(load_data.load_movielen)
-        loader.rng = np.random.default_rng(7)
+        loader = make_split_small_loader(load_data.load_movielen)
         fixed_test_set = build_fixed_test_set(loader, run_seed=7)
 
         online_events = [loader.step() for _ in range(100)]
@@ -148,19 +172,40 @@ class LoaderStreamContractTests(unittest.TestCase):
             self.edge_keys(online_events),
         )
 
-    @unittest.expectedFailure
     def test_fixed_test_edges_are_disjoint_from_online_edges(self):
-        """Separate data splits are still required for a strict no-overlap rule."""
         from src.main import build_fixed_test_set
 
-        loader = make_small_loader(load_data.load_movielen)
-        loader.rng = np.random.default_rng(7)
+        loader = make_split_small_loader(load_data.load_movielen)
         fixed_test_set = build_fixed_test_set(loader, run_seed=7)
 
         online_events = [loader.step() for _ in range(100)]
-        test_keys = set(self.edge_keys(fixed_test_set))
-        online_keys = set(self.edge_keys(online_events))
+        test_keys = self.positive_edge_keys(fixed_test_set)
+        online_keys = self.positive_edge_keys(online_events)
         self.assertTrue(test_keys.isdisjoint(online_keys))
+
+    def test_all_small_loader_edge_pools_are_pairwise_disjoint(self):
+        for loader_class in SMALL_LOADER_CLASSES:
+            with self.subTest(loader=loader_class.__name__):
+                loader = make_split_small_loader(loader_class)
+                for pool_name in ("_positive_splits", "_negative_splits"):
+                    pools = getattr(loader, pool_name)
+                    keys = {
+                        name: {tuple(edge) for edge in edges}
+                        for name, edges in pools.items()
+                    }
+                    self.assertTrue(keys["online"].isdisjoint(keys["validation"]))
+                    self.assertTrue(keys["online"].isdisjoint(keys["test"]))
+                    self.assertTrue(keys["validation"].isdisjoint(keys["test"]))
+
+    def test_undirected_reverse_edges_stay_in_the_same_split(self):
+        edges = np.array(
+            [[0, 1], [1, 0], [2, 3], [4, 5], [6, 7]], dtype=np.int64
+        )
+        splits = load_data._partition_edges(edges, seed=3, undirected=True)
+        memberships = {
+            tuple(edge): name for name, values in splits.items() for edge in values
+        }
+        self.assertEqual(memberships[(0, 1)], memberships[(1, 0)])
 
     def test_model_numpy_randomness_does_not_change_loader_events(self):
         first = make_small_loader(load_data.load_movielen)
