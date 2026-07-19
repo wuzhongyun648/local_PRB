@@ -1,4 +1,5 @@
 import unittest
+from unittest import mock
 
 import numpy as np
 import scipy.sparse as sp
@@ -43,6 +44,7 @@ def assert_graph_state_contract(testcase, manager, edge):
     column_sums = np.asarray(manager.P.sum(axis=0)).reshape(-1)
     non_isolated = actual_degree > 0
     np.testing.assert_allclose(column_sums[non_isolated], 1.0)
+    testcase.assertTrue(sp.isspmatrix_csc(manager.P))
 
 
 class GraphStateContractTests(unittest.TestCase):
@@ -86,6 +88,44 @@ class GraphStateContractTests(unittest.TestCase):
                 manager, update_args, _ = make_empty_graph(graph_class)
                 self.assertIs(manager.update(*update_args), True)
                 self.assertIs(manager.update(*update_args), False)
+
+    def test_new_edges_change_only_two_endpoint_degrees(self):
+        for graph_class in GRAPH_CLASSES:
+            with self.subTest(graph=graph_class.__name__):
+                manager, update_args, canonical_edge = make_empty_graph(graph_class)
+                degree_before = np.asarray(manager.degree).reshape(-1).copy()
+                nnz_before = manager.A.nnz
+                self.assertTrue(manager.update(*update_args))
+
+                degree_delta = np.asarray(manager.degree).reshape(-1) - degree_before
+                changed = set(np.flatnonzero(degree_delta))
+                self.assertSetEqual(changed, set(canonical_edge))
+                np.testing.assert_array_equal(
+                    degree_delta[list(canonical_edge)],
+                    np.ones(2),
+                )
+                self.assertEqual(manager.A.nnz - nnz_before, 2)
+
+    def test_main_skips_csr_rebuild_for_existing_edges(self):
+        from src.main import apply_graph_update
+
+        manager = mock.Mock()
+        manager.update.return_value = False
+        edge_added, updated_csr = apply_graph_update(manager, 1, 2)
+        self.assertFalse(edge_added)
+        self.assertIsNone(updated_csr)
+        manager.P.tocsr.assert_not_called()
+
+    def test_main_rebuilds_csr_for_new_edges(self):
+        from src.main import apply_graph_update
+
+        manager = mock.Mock()
+        manager.update.return_value = True
+        manager.P.tocsr.return_value = "updated-csr"
+        edge_added, updated_csr = apply_graph_update(manager, 1, 2)
+        self.assertTrue(edge_added)
+        self.assertEqual(updated_csr, "updated-csr")
+        manager.P.tocsr.assert_called_once_with()
 
 
 class ActiveRegistryContractTests(unittest.TestCase):
