@@ -1,6 +1,5 @@
 
 import argparse
-import json
 import numpy as np
 import scipy.sparse as sp
 import os
@@ -30,11 +29,6 @@ from src.EENet import EE_Net
 from src import ppr_solver
 from src import utils
 from src.dynamic_appr import DynamicAPPR
-from src.event_stream import (
-    canonical_stream_path,
-    generate_event_stream,
-    load_or_generate_event_stream,
-)
 from src.experiment_configs import (
     DEFAULT_EE_NET_POOL_STEP,
     DEFAULT_HIDDEN,
@@ -78,14 +72,6 @@ METHOD_ALIASES = {
     "DynLocPRB": "dyn_locPRB",
 }
 METHOD_LABEL_SUFFIX = ""
-TEST_SEED_OFFSET = 1_000_003
-ABLATION_CHOICES = (
-    "none",
-    "full_pool",
-    "legacy_rng",
-    "reference_training",
-    "directed_graph",
-)
 
 
 def parse_method(value):
@@ -119,89 +105,6 @@ def build_ee_net(dim, n_arm, args, kernel_size):
         neural_decision_maker=False,
         kernel_size=kernel_size,
     )
-
-
-def build_fixed_test_set(loader, run_seed):
-    """Build a deterministic test set from the loader's independent test split."""
-    test_seed = (int(run_seed) + TEST_SEED_OFFSET) % (2**32)
-    test_loader = loader.for_split("test", seed=test_seed)
-    stream = generate_event_stream(
-        test_loader, rounds=100, dataset=getattr(loader, "dataset_name", "test"), seed=test_seed
-    )
-    return [stream.materialize(test_loader, index) for index in range(len(stream))]
-
-
-def apply_graph_update(graph_manager, *edge_args):
-    """Apply one graph update and rebuild CSR only for a newly inserted edge."""
-    edge_added, updated_csr, _, _ = apply_graph_update_timed(
-        graph_manager, *edge_args
-    )
-    return edge_added, updated_csr
-
-
-def apply_graph_update_timed(graph_manager, *edge_args):
-    """Apply an update and report mutation and CSR conversion separately."""
-    update_start = time.perf_counter()
-    edge_added = graph_manager.update(*edge_args)
-    update_seconds = time.perf_counter() - update_start
-    if not edge_added:
-        return False, None, update_seconds, 0.0
-    rebuild_start = time.perf_counter()
-    updated_csr = graph_manager.P.tocsr()
-    rebuild_seconds = time.perf_counter() - rebuild_start
-    return True, updated_csr, update_seconds, rebuild_seconds
-
-
-def apply_directed_bipartite_update_timed(graph_manager, item_id, user_id):
-    """Reproduce PRB's one-way MovieLens/Amazon graph update for ablation."""
-    update_start = time.perf_counter()
-    item_node = int(item_id) + int(graph_manager.num_users)
-    user_id = int(user_id)
-    if graph_manager.A[item_node, user_id] != 0:
-        return False, None, time.perf_counter() - update_start, 0.0
-    graph_manager.A[item_node, user_id] = 1
-    graph_manager.degree[item_node] += 1
-    column_sum = graph_manager.A[:, user_id].sum()
-    graph_manager.P[:, user_id] = graph_manager.A[:, user_id] / column_sum
-    graph_manager.num_edges = graph_manager.A.nnz
-    update_seconds = time.perf_counter() - update_start
-    rebuild_start = time.perf_counter()
-    updated_csr = graph_manager.P.tocsr()
-    return (
-        True,
-        updated_csr,
-        update_seconds,
-        time.perf_counter() - rebuild_start,
-    )
-
-
-def configure_ablation_loader(loader, ablation, seed):
-    """Change exactly one MovieLens stream factor for diagnostic runs."""
-    if ablation == "full_pool":
-        positive = loader.m[loader.m[:, 2] == 1, :2].astype(np.int64)
-        negative = loader.m[loader.m[:, 2] == -1, :2].astype(np.int64)
-        loader.pos_index = positive
-        loader.neg_index = negative
-        loader.p_d = len(positive)
-        loader.n_d = len(negative)
-        loader.rng = np.random.default_rng(seed)
-    elif ablation == "legacy_rng":
-        loader.rng = np.random.RandomState(seed)
-    return loader
-
-
-def should_train_main(t, ablation):
-    if ablation == "reference_training":
-        return t % (10 if t < 1000 else 100) == 0
-    return t % (
-        TRAIN_EVERY_BEFORE_2000 if t < 2000 else TRAIN_EVERY_AFTER_2000
-    ) == 0
-
-
-def selected_graph_edge(context_ind, arm, target_offset=0):
-    """Return canonical graph-node endpoints for the selected candidate."""
-    raw_u, raw_v = context_ind[int(arm)]
-    return int(raw_u), int(raw_v) + int(target_offset)
 
 def get_configurations(graph_name):
     """
@@ -246,17 +149,9 @@ def parse_arguments():
     parser.add_argument('--workers', type=int, default=DEFAULT_WORKERS, help='Number of multiprocessing workers')
     parser.add_argument('--runs', type=int, default=DEFAULT_RUNS, help='Total number of independent runs')
     parser.add_argument('--seed', type=int, default=0)
-    parser.add_argument('--split_seed', type=int, default=1729, help='Dataset split seed shared by all runs and methods')
     parser.add_argument('--n_neg', type=int, default=DEFAULT_N_NEG, help='Number of negative candidates per round (k = n_neg + 1)')
     parser.add_argument('--init_hops', type=int, default=0, help='H-hop warm-start radius for the initial graph; 0 keeps the default graph')
     parser.add_argument('--init_topk', type=int, default=0, help='Use top-k highest-degree seed nodes for warm-start; 0 disables warm-start')
-    parser.add_argument('--dyn_check_every', type=int, default=0, help='Compare DYN-APPR with scratch APPR every N rounds; 0 disables checks')
-    parser.add_argument(
-        '--ablation',
-        choices=ABLATION_CHOICES,
-        default='none',
-        help='Change one protocol factor for controlled diagnostic runs',
-    )
     
     parser.add_argument('--init_edges', type=int, default=None, help='Limit the number of initial edges for PPA/Vessel')
     parser.add_argument('--hidden', type=int, default=DEFAULT_HIDDEN, help='EE-Net exploitation hidden width (Network_exploitation)')
@@ -277,8 +172,6 @@ def parse_arguments():
         parser.error("--init_hops must be >= 0")
     if args.init_topk < 0:
         parser.error("--init_topk must be >= 0")
-    if args.dyn_check_every < 0:
-        parser.error("--dyn_check_every must be >= 0")
         
     return args
 
@@ -298,33 +191,22 @@ def run_experiment(run_id,args, save_dir):
     
     print(f">>> [Worker {os.getpid()}] Starting Run {run_id}...", flush=True)
     LoaderClass, GraphClass, data_path, n_users, n_items = get_configurations(args.graph_name)
-    bandit_loader = LoaderClass(
-        n_neg=args.n_neg,
-        seed=seed,
-        split="online",
-        split_seed=args.split_seed,
-    )
-    configure_ablation_loader(bandit_loader, args.ablation, seed)
-    event_dataset_name = (
-        args.graph_name
-        if args.ablation == "none"
-        else f"{args.graph_name}__ablation_{args.ablation}"
-    )
-    event_path = canonical_stream_path(
-        os.path.join(RESULTS_DIR, "event_streams"),
-        event_dataset_name,
-        "online",
-        seed,
-        args.split_seed,
-        bandit_loader.n_arm,
-        args.T,
-    )
-    event_stream_t0 = time.perf_counter()
-    online_stream = load_or_generate_event_stream(
-        bandit_loader, event_path, args.T, event_dataset_name, seed
-    )
-    event_stream_init_seconds = time.perf_counter() - event_stream_t0
-    print(f"-> Event stream: {online_stream.event_hash[:12]} ({event_path})", flush=True)
+    if args.graph_name in ['PPA', 'Vessel'] and args.init_edges is not None:
+        bandit_loader = LoaderClass(max_init_edges=args.init_edges)
+    else:
+        bandit_loader = LoaderClass(n_neg=args.n_neg)
+    loader_rng_state = np.random.get_state()
+
+    def loader_step():
+        nonlocal loader_rng_state
+        caller_state = np.random.get_state()
+        np.random.set_state(loader_rng_state)
+        try:
+            result = bandit_loader.step()
+            loader_rng_state = np.random.get_state()
+            return result
+        finally:
+            np.random.set_state(caller_state)
     print(f"-> Loading Graph from {data_path} ...")
     graph_manager = GraphClass(data_path)
     if args.graph_name in ['MovieLens', 'Amazon_fashion']:
@@ -365,30 +247,13 @@ def run_experiment(run_id,args, save_dir):
     # 从报告的 step_duration / Time / Total / TimeAcc 横轴中累计扣除：测试集构造 + 周期评测
     total_excluded_seconds = 0.0
     timing_breakdown = {
-        'event_stream_init_time': event_stream_init_seconds,
-        'test_build_time': 0.0,
-        'eval_time': 0.0,
-        'event_materialize_time': 0.0,
-        'predict_time': 0.0,
-        'source_build_time': 0.0,
         'ppr_time': 0.0,
-        'dyn_check_time': 0.0,
-        'appr_pushes': 0,
-        'decision_time': 0.0,
-        'graph_update_time': 0.0,
-        'csr_rebuild_time': 0.0,
-        'model_update_time': 0.0,
         'train_time': 0.0,
-        'online_total_time': 0.0,
-        'new_edges': 0,
-        'repeated_edges': 0,
+        'other_time': 0.0,
     }
-    dyn_diagnostics = []
     _t_build0 = time.time()
-    fixed_test_set = build_fixed_test_set(bandit_loader, seed)
-    test_build_dt = time.time() - _t_build0
-    total_excluded_seconds += test_build_dt
-    timing_breakdown['test_build_time'] += test_build_dt
+    fixed_test_set = bandit_loader.testing_dataset()
+    total_excluded_seconds += time.time() - _t_build0
 
     for t in range(args.T):
         step_start = time.time()
@@ -439,7 +304,6 @@ def run_experiment(run_id,args, save_dir):
             test_acc = test_hits / 100.0
             eval_dt = time.time() - eval_t0
             total_excluded_seconds += eval_dt
-            timing_breakdown['eval_time'] += eval_dt
             # 不含测试集构造与评测的累计墙钟时间（本轮评测结束后）
             current_eval_time = time.time() - start_time_trial - total_excluded_seconds
             time_acc_results.append([current_eval_time, test_acc])
@@ -447,18 +311,17 @@ def run_experiment(run_id,args, save_dir):
         # --- A. Bandit Step (Context) ---
         online_step_t0 = time.perf_counter()
         
-        materialize_t0 = time.perf_counter()
-        step_result = online_stream.materialize(bandit_loader, t)
-        timing_breakdown['event_materialize_time'] += time.perf_counter() - materialize_t0
-        context, context_ind, rwd, _, _, _ = step_result
+        step_result = loader_step()
+        if len(step_result) == 6:
+            context, context_ind, rwd, _, user_id, _ = step_result
+        else:
+            # OGB 
+            context, context_ind, rwd, _, user_id, _ = step_result
             
         # --- B. Neural Net Predict ---
-        predict_t0 = time.perf_counter()
         _, h_observe = ee_net.predict(context, t)
-        timing_breakdown['predict_time'] += time.perf_counter() - predict_t0
         
         # --- C. Construct h Vector ---
-        source_t0 = time.perf_counter()
         h_dense = np.zeros(num_nodes, dtype=np.float64)
         
         
@@ -482,8 +345,6 @@ def run_experiment(run_id,args, save_dir):
         ppr_dt = 0.0
         
         h_dense = prepare_ppr_source(h_dense, args.method)
-        timing_breakdown['source_build_time'] += time.perf_counter() - source_t0
-        scratch_check_p = None
         if args.method in ('LocPRB', 'dyn_locPRB'):
             ppr_t0 = time.perf_counter()
             degree = np.array(graph_manager.degree).flatten().astype(np.int64)
@@ -499,7 +360,7 @@ def run_experiment(run_id,args, save_dir):
                     args.appr_eps,
                 )
             else:
-                current_p, scratch_pushes = ppr_solver.appr_with_stats(
+                current_p = ppr_solver.appr(
                     num_nodes,
                     P_current_csr.indptr,
                     P_current_csr.indices,
@@ -508,24 +369,7 @@ def run_experiment(run_id,args, save_dir):
                     args.alpha,
                     args.appr_eps,
                 )
-                timing_breakdown['appr_pushes'] += int(scratch_pushes)
             ppr_dt = time.perf_counter() - ppr_t0
-            if (
-                args.method == 'dyn_locPRB'
-                and args.dyn_check_every
-                and t % args.dyn_check_every == 0
-            ):
-                dyn_check_t0 = time.perf_counter()
-                scratch_check_p, scratch_pushes = ppr_solver.appr_with_stats(
-                    num_nodes,
-                    P_current_csr.indptr,
-                    P_current_csr.indices,
-                    degree,
-                    h_dense,
-                    args.alpha,
-                    args.appr_eps,
-                )
-                timing_breakdown['dyn_check_time'] += time.perf_counter() - dyn_check_t0
             
         elif args.method == 'PRB':
             ppr_t0 = time.perf_counter()
@@ -540,7 +384,6 @@ def run_experiment(run_id,args, save_dir):
         
         # --- E. Decision & Reward ---
         
-        decision_t0 = time.perf_counter()
         cand_graph_ids = []
         for pair in context_ind:
             cand_graph_ids.append(pair[1] + current_user_offset)
@@ -548,67 +391,41 @@ def run_experiment(run_id,args, save_dir):
         p_scores = current_p[cand_graph_ids]
         
         final_arm = int(np.argmax(p_scores))
-        if scratch_check_p is not None:
-            scratch_arm = int(np.argmax(scratch_check_p[cand_graph_ids]))
-            delta = current_p - scratch_check_p
-            dyn_diagnostics.append({
-                'round': t,
-                'l1_error': float(np.sum(np.abs(delta))),
-                'linf_error': float(np.max(np.abs(delta))),
-                'decision_disagreement': bool(final_arm != scratch_arm),
-                'dynamic_pushes': int(dynamic_solver.last_stats['pushes']),
-                'scratch_pushes': int(scratch_pushes),
-            })
         
         if rwd[final_arm] == 1.0:
             reward = 1.0
-            connected_u, connected_v = selected_graph_edge(
-                context_ind,
-                final_arm,
-                target_offset=current_user_offset,
-            )
+            connected_u = user_id
+            connected_v = cand_graph_ids[final_arm]
         else:
             reward = 0.0
             connected_u = None
         sum_regret += (1.0 - reward)
-        timing_breakdown['decision_time'] += time.perf_counter() - decision_t0
         
         # --- F. Graph Update ---
         if reward == 1.0 and connected_u is not None:
             if args.graph_name in ['MovieLens', 'Amazon_fashion']:
                 raw_item_id = connected_v - current_user_offset
-                if args.ablation == "directed_graph":
-                    edge_added, updated_csr, update_dt, rebuild_dt = (
-                        apply_directed_bipartite_update_timed(
-                            graph_manager, raw_item_id, connected_u
-                        )
-                    )
-                else:
-                    edge_added, updated_csr, update_dt, rebuild_dt = apply_graph_update_timed(
-                        graph_manager, raw_item_id, connected_u
-                    )
+                graph_manager.update(raw_item_id, connected_u)
             else:
-                edge_added, updated_csr, update_dt, rebuild_dt = apply_graph_update_timed(
-                    graph_manager, connected_u, connected_v
-                )
-            timing_breakdown['graph_update_time'] += update_dt
-            timing_breakdown['csr_rebuild_time'] += rebuild_dt
-            if edge_added:
-                timing_breakdown['new_edges'] += 1
-                P_current_csr = updated_csr
-            else:
-                timing_breakdown['repeated_edges'] += 1
+                graph_manager.update(connected_u, connected_v)
+            P_current_csr = graph_manager.P.tocsr()  
+            degree = np.array(graph_manager.degree).flatten().astype(np.int64)
+            degree[degree == 0] = 1  
         # --- G. Net Update & Train ---
-        model_update_t0 = time.perf_counter()
         ee_net.update(context, reward, t)
-        timing_breakdown['model_update_time'] += time.perf_counter() - model_update_t0
         
         loss1, loss2 = 0.0, 0.0
         train_dt = 0.0
-        if should_train_main(t, args.ablation):
-            train_t0 = time.perf_counter()
-            loss1, loss2 = ee_net.train(t)
-            train_dt = time.perf_counter() - train_t0
+        if  t < 2000:
+            if t % TRAIN_EVERY_BEFORE_2000 == 0:
+                train_t0 = time.perf_counter()
+                loss1, loss2 = ee_net.train(t)
+                train_dt = time.perf_counter() - train_t0
+        else:
+            if t % TRAIN_EVERY_AFTER_2000 == 0:
+                train_t0 = time.perf_counter()
+                loss1, loss2 = ee_net.train(t)
+                train_dt = time.perf_counter() - train_t0
             
         # --- H. Recording ---
         step_end = time.time()
@@ -626,9 +443,10 @@ def run_experiment(run_id,args, save_dir):
             utils.save_results(save_dir, results_list, is_final=False)
 
         online_step_elapsed = time.perf_counter() - online_step_t0
+        other_dt = max(0.0, online_step_elapsed - ppr_dt - train_dt)
         timing_breakdown['ppr_time'] += ppr_dt
         timing_breakdown['train_time'] += train_dt
-        timing_breakdown['online_total_time'] += online_step_elapsed
+        timing_breakdown['other_time'] += other_dt
 
     # --- Final Save ---
     total_time = time.time() - start_time_trial - total_excluded_seconds
@@ -641,23 +459,6 @@ def run_experiment(run_id,args, save_dir):
     time_acc_save_path = os.path.join(save_dir, f"worker_{run_id}_TimeAcc.npy")
     np.save(time_acc_save_path, np.array(time_acc_results))
     print(f"-> Saved Time-Accuracy results to {time_acc_save_path}")
-    timing_breakdown['event_hash'] = online_stream.event_hash
-    timing_breakdown['event_stream_path'] = event_path
-    timing_breakdown['dynamic_appr'] = dynamic_solver.stats if dynamic_solver else None
-    timing_breakdown['dynamic_checks'] = dyn_diagnostics
-    attributed_keys = (
-        'event_materialize_time', 'predict_time', 'source_build_time',
-        'ppr_time', 'dyn_check_time', 'decision_time', 'graph_update_time',
-        'csr_rebuild_time', 'model_update_time', 'train_time',
-    )
-    timing_breakdown['unattributed_online_time'] = max(
-        0.0,
-        timing_breakdown['online_total_time']
-        - sum(timing_breakdown[key] for key in attributed_keys),
-    )
-    timing_path = os.path.join(save_dir, f"worker_{run_id}_timing.json")
-    with open(timing_path, "w", encoding="utf-8") as handle:
-        json.dump(timing_breakdown, handle, indent=2)
     return np.array(results_list), timing_breakdown
 
 def main():
@@ -670,12 +471,10 @@ def main():
         param_str = f"powT{args.power_T}"
     ks_resolved = utils.resolve_ee_net_kernel_size(args.graph_name, args.kernel_size)
     method_label = f"{args.method}{METHOD_LABEL_SUFFIX}"
-    ablation_suffix = "" if args.ablation == "none" else f"_abl{args.ablation}"
     folder_name = (
         f"{args.graph_name}_{method_label}_alpha{args.alpha}_{param_str}_"
         f"T{args.T}_k{args.n_neg + 1}_initH{args.init_hops}_initK{args.init_topk}_"
-        f"lr1{args.lr1}_lr2{args.lr2}_h{args.hidden}_ks{ks_resolved}"
-        f"{ablation_suffix}_{current_time}"
+        f"lr1{args.lr1}_lr2{args.lr2}_h{args.hidden}_ks{ks_resolved}_{current_time}"
     )
     
     
@@ -697,28 +496,15 @@ def main():
     final_data = np.stack([result for result, _ in valid_results])
     total_train_time = sum(stats['train_time'] for _, stats in valid_results)
     total_ppr_time = sum(stats['ppr_time'] for _, stats in valid_results)
-    total_online_time = sum(stats['online_total_time'] for _, stats in valid_results)
+    total_other_time = sum(stats['other_time'] for _, stats in valid_results)
     print(f"=== All Done. Aggregated Shape: {final_data.shape} ===")
     print(
         "=== Online Time Breakdown Across All Runs "
         f"(excl. testset build & eval) | "
         f"Train: {total_train_time:.2f}s | "
         f"PPR: {total_ppr_time:.2f}s | "
-        f"OnlineTotal: {total_online_time:.2f}s ==="
+        f"Other: {total_other_time:.2f}s ==="
     )
-    aggregate_timing = {
-        key: sum(stats[key] for _, stats in valid_results)
-        for key in (
-            'event_stream_init_time', 'test_build_time', 'eval_time',
-            'event_materialize_time', 'predict_time', 'source_build_time',
-            'ppr_time', 'dyn_check_time', 'decision_time', 'graph_update_time',
-            'csr_rebuild_time', 'model_update_time', 'train_time',
-            'online_total_time', 'unattributed_online_time', 'appr_pushes',
-            'new_edges', 'repeated_edges',
-        )
-    }
-    with open(os.path.join(save_dir, "timing_aggregate.json"), "w", encoding="utf-8") as handle:
-        json.dump(aggregate_timing, handle, indent=2)
     utils.save_results(save_dir, final_data, is_final=True, args=args)
 
 
