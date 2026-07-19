@@ -129,6 +129,16 @@ class GraphStateContractTests(unittest.TestCase):
 
 
 class ActiveRegistryContractTests(unittest.TestCase):
+    def test_selected_graph_edge_comes_from_selected_candidate(self):
+        from src.main import selected_graph_edge
+
+        candidates = np.array([[9, 2], [4, 7], [3, 1]], dtype=np.int64)
+        self.assertTupleEqual(selected_graph_edge(candidates, 1), (4, 7))
+        self.assertTupleEqual(
+            selected_graph_edge(candidates, 1, target_offset=100),
+            (4, 107),
+        )
+
     def test_main_registers_exactly_the_active_graphs(self):
         from src import main
 
