@@ -59,9 +59,7 @@ class GraphStateContractTests(unittest.TestCase):
         np.testing.assert_array_equal(np.asarray(manager.degree), degree_before)
         self.assertEqual(manager.num_edges, num_edges_before)
 
-    @unittest.expectedFailure
     def test_movielens_graph_state_contract(self):
-        """Known P0: MovieLens inserts only one direction."""
         self.assert_update_contract(utils.MovieLens)
 
     def test_amazon_graph_state_contract(self):
@@ -73,24 +71,16 @@ class GraphStateContractTests(unittest.TestCase):
     def test_grqc_graph_state_contract(self):
         self.assert_update_contract(utils.Grqc)
 
-    @unittest.expectedFailure
     def test_ppa_graph_state_contract(self):
-        """Known issue: num_edges switches from undirected to nnz counting."""
         self.assert_update_contract(utils.PPA)
 
-    @unittest.expectedFailure
     def test_collab_graph_state_contract(self):
-        """Known issue: num_edges switches from undirected to nnz counting."""
         self.assert_update_contract(utils.Collab)
 
-    @unittest.expectedFailure
     def test_vessel_graph_state_contract(self):
-        """Known issue: num_edges switches from undirected to nnz counting."""
         self.assert_update_contract(utils.Vessel)
 
-    @unittest.expectedFailure
     def test_updates_report_whether_an_edge_was_added(self):
-        """The future common API requires True for insert and False for no-op."""
         for graph_class in GRAPH_CLASSES:
             with self.subTest(graph=graph_class.__name__):
                 manager, update_args, _ = make_empty_graph(graph_class)

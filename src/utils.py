@@ -195,12 +195,16 @@ class MovieLens(graph):
         }
     def update(self,item_id, user_id):  
         item_node = item_id + self.num_users
-        if self.A[item_node, user_id] == 0:
-            self.A[item_node, user_id] = 1
-        self.P[:, user_id] = self.A[:, user_id]/ self.A[:, user_id].sum()
+        if self.A[item_node, user_id] != 0:
+            return False
+        self.A[item_node, user_id] = 1
+        self.A[user_id, item_node] = 1
+        self.P[:, user_id] = self.A[:, user_id] / self.A[:, user_id].sum()
+        self.P[:, item_node] = self.A[:, item_node] / self.A[:, item_node].sum()
         self.P = self.P.tocsr()
-        self.num_edges = self.A.nnz
-        self.degree = np.sum(self.A, axis=1) 
+        self.num_edges = self.A.nnz // 2
+        self.degree = np.sum(self.A, axis=1)
+        return True
 
 class Amazon_fashion(graph):
     def __init__(self, path):
@@ -259,14 +263,16 @@ class Amazon_fashion(graph):
     
     def update(self,item_id, user_id):  
         item_node = item_id + self.num_users
-        if self.A[item_node, user_id] == 0:
-            self.A[item_node, user_id] = 1
-            self.A[user_id, item_node] = 1
-        self.P[:, user_id] = self.A[:, user_id]/ self.A[:, user_id].sum()
-        self.P[:, item_node] = self.A[:, item_node]/ self.A[:, item_node].sum()
+        if self.A[item_node, user_id] != 0:
+            return False
+        self.A[item_node, user_id] = 1
+        self.A[user_id, item_node] = 1
+        self.P[:, user_id] = self.A[:, user_id] / self.A[:, user_id].sum()
+        self.P[:, item_node] = self.A[:, item_node] / self.A[:, item_node].sum()
         self.P = self.P.tocsr()
         self.num_edges = self.A.nnz // 2
-        self.degree = np.sum(self.A, axis=1) 
+        self.degree = np.sum(self.A, axis=1)
+        return True
         
 class Facebook(graph):
     def __init__(self, path):
@@ -318,14 +324,16 @@ class Facebook(graph):
         }
     
     def update(self, user_id1, user_id2):  
-        if self.A[user_id1, user_id2] == 0 :
-            self.A[user_id1, user_id2] = 1
-            self.A[user_id2, user_id1] = 1
-        self.P[:, user_id1] = self.A[:, user_id1]/ self.A[:, user_id1].sum()
-        self.P[:, user_id2] = self.A[:, user_id2]/ self.A[:, user_id2].sum()
+        if self.A[user_id1, user_id2] != 0:
+            return False
+        self.A[user_id1, user_id2] = 1
+        self.A[user_id2, user_id1] = 1
+        self.P[:, user_id1] = self.A[:, user_id1] / self.A[:, user_id1].sum()
+        self.P[:, user_id2] = self.A[:, user_id2] / self.A[:, user_id2].sum()
         self.P = self.P.tocsr()
         self.num_edges = self.A.nnz // 2
-        self.degree = np.sum(self.A, axis=1) 
+        self.degree = np.sum(self.A, axis=1)
+        return True
 
 class Grqc(graph):
     def __init__(self, path):
@@ -377,15 +385,16 @@ class Grqc(graph):
         }
     
     def update(self, user_id1, user_id2):  
-        if self.A[user_id1, user_id2] == 0 :
-            self.A[user_id1, user_id2] = 1 
-            self.A[user_id2, user_id1] = 1
-            
-        self.P[:, user_id1] = self.A[:, user_id1]/ self.A[:, user_id1].sum() 
-        self.P[:, user_id2] = self.A[:, user_id2]/ self.A[:, user_id2].sum()
+        if self.A[user_id1, user_id2] != 0:
+            return False
+        self.A[user_id1, user_id2] = 1
+        self.A[user_id2, user_id1] = 1
+        self.P[:, user_id1] = self.A[:, user_id1] / self.A[:, user_id1].sum()
+        self.P[:, user_id2] = self.A[:, user_id2] / self.A[:, user_id2].sum()
         self.P = self.P.tocsr()
         self.num_edges = self.A.nnz // 2
-        self.degree = np.sum(self.A, axis=1) 
+        self.degree = np.sum(self.A, axis=1)
+        return True
         
 class PPA(graph):
     def __init__(self, path):
@@ -434,15 +443,16 @@ class PPA(graph):
         }
     
     def update(self, u, v):  
-        if self.A[u, v] == 0:
-            self.A[u, v] = 1
-            self.A[v, u] = 1
-            
-            self.P[:, u] = self.A[:, u] / self.A[:, u].sum()
-            self.degree[u] = self.A[:, u].sum()
-            self.P[:, v] = self.A[:, v] / self.A[:, v].sum()
-            self.degree[v] = self.A[:, v].sum()
-            self.num_edges = self.A.nnz 
+        if self.A[u, v] != 0:
+            return False
+        self.A[u, v] = 1
+        self.A[v, u] = 1
+        self.P[:, u] = self.A[:, u] / self.A[:, u].sum()
+        self.degree[u] = self.A[:, u].sum()
+        self.P[:, v] = self.A[:, v] / self.A[:, v].sum()
+        self.degree[v] = self.A[:, v].sum()
+        self.num_edges = self.A.nnz // 2
+        return True
 
 class Collab(graph):
     def __init__(self, path):
@@ -490,15 +500,16 @@ class Collab(graph):
         }
     
     def update(self, u, v):  
-        if self.A[u, v] == 0:
-            self.A[u, v] = 1
-            self.A[v, u] = 1
-            
-            self.P[:, u] = self.A[:, u] / self.A[:, u].sum()
-            self.degree[u] = self.A[:, u].sum()
-            self.P[:, v] = self.A[:, v] / self.A[:, v].sum()
-            self.degree[v] = self.A[:, v].sum()
-            self.num_edges = self.A.nnz 
+        if self.A[u, v] != 0:
+            return False
+        self.A[u, v] = 1
+        self.A[v, u] = 1
+        self.P[:, u] = self.A[:, u] / self.A[:, u].sum()
+        self.degree[u] = self.A[:, u].sum()
+        self.P[:, v] = self.A[:, v] / self.A[:, v].sum()
+        self.degree[v] = self.A[:, v].sum()
+        self.num_edges = self.A.nnz // 2
+        return True
 
 class Vessel(graph):
     def __init__(self, path):
@@ -546,12 +557,13 @@ class Vessel(graph):
         }
     
     def update(self, u, v):  
-        if self.A[u, v] == 0:
-            self.A[u, v] = 1
-            self.A[v, u] = 1
-            
-            self.P[:, u] = self.A[:, u] / self.A[:, u].sum()
-            self.degree[u] = self.A[:, u].sum()
-            self.P[:, v] = self.A[:, v] / self.A[:, v].sum()
-            self.degree[v] = self.A[:, v].sum()
-            self.num_edges = self.A.nnz 
+        if self.A[u, v] != 0:
+            return False
+        self.A[u, v] = 1
+        self.A[v, u] = 1
+        self.P[:, u] = self.A[:, u] / self.A[:, u].sum()
+        self.degree[u] = self.A[:, u].sum()
+        self.P[:, v] = self.A[:, v] / self.A[:, v].sum()
+        self.degree[v] = self.A[:, v].sum()
+        self.num_edges = self.A.nnz // 2
+        return True
