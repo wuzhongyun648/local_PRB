@@ -1,5 +1,7 @@
 import unittest
 from unittest import mock
+import os
+import tempfile
 
 import numpy as np
 import scipy.sparse as sp
@@ -48,6 +50,28 @@ def assert_graph_state_contract(testcase, manager, edge):
 
 
 class GraphStateContractTests(unittest.TestCase):
+    def test_movielens_initial_graph_uses_only_positive_labels(self):
+        entries = np.array(
+            [
+                [0, 0, 1],
+                [0, 1, -1],
+                [1, 0, 0],
+            ],
+            dtype=np.int64,
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "movielens.npy")
+            np.save(path, entries)
+            manager = utils.MovieLens(path)
+            manager.load(num_users=2, num_items=2)
+
+        self.assertEqual(float(manager.A[0, 2]), 1.0)
+        self.assertEqual(float(manager.A[2, 0]), 1.0)
+        self.assertEqual(float(manager.A[0, 3]), 0.0)
+        self.assertEqual(float(manager.A[3, 0]), 0.0)
+        self.assertEqual(float(manager.A[1, 2]), 0.0)
+        self.assertEqual(manager.num_edges, 1)
+
     def assert_update_contract(self, graph_class):
         manager, update_args, canonical_edge = make_empty_graph(graph_class)
         manager.update(*update_args)
