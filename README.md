@@ -17,7 +17,7 @@ src/
   load_data.py                  # dataset loaders
   utils.py                      # graph utilities and result saving
   ppr_solver.py                 # PPR/APPR propagation utilities
-  EENet.py, EENetClass.py       # neural scoring models for PRB/FastPRB
+  EENet.py, EENetClass.py       # neural scoring models for PRB/LocPRB
   baselines_new/                # baseline model implementations
   plot_results.py               # generic plotting for active results
   plot_paper_figures.py         # regenerate paper figures from results/final/data
@@ -36,7 +36,7 @@ python main.py ...
 python online_baselines_run.py ...
 ```
 
-Module-style execution is supported for the main PRB/FastPRB runner:
+Module-style execution is supported for the main PRB/LocPRB runner:
 
 ```bash
 python -m src.main ...
@@ -78,12 +78,12 @@ CUDA_VISIBLE_DEVICES=0 python main.py ...
 
 ## Main Experiments
 
-FastPRB example:
+LocPRB example:
 
 ```bash
 python main.py \
   --graph_name MovieLens \
-  --method FastPRB \
+  --method LocPRB \
   --alpha 0.85 \
   --appr_eps 8.33e-05 \
   --T 10000 \
@@ -125,9 +125,9 @@ results/final/data/table1/
 Run `main.py` with the same dataset and hyperparameters while changing `--appr_eps`.
 
 ```bash
-python main.py --graph_name MovieLens --method FastPRB --alpha 0.85 --appr_eps 8.33e-04 --T 10000 --lr1 0.0073 --lr2 0.0004 --runs 10 --workers 10
-python main.py --graph_name MovieLens --method FastPRB --alpha 0.85 --appr_eps 8.33e-05 --T 10000 --lr1 0.0073 --lr2 0.0004 --runs 10 --workers 10
-python main.py --graph_name MovieLens --method FastPRB --alpha 0.85 --appr_eps 8.33e-06 --T 10000 --lr1 0.0073 --lr2 0.0004 --runs 10 --workers 10
+python main.py --graph_name MovieLens --method LocPRB --alpha 0.85 --appr_eps 8.33e-04 --T 10000 --lr1 0.0073 --lr2 0.0004 --runs 10 --workers 10
+python main.py --graph_name MovieLens --method LocPRB --alpha 0.85 --appr_eps 8.33e-05 --T 10000 --lr1 0.0073 --lr2 0.0004 --runs 10 --workers 10
+python main.py --graph_name MovieLens --method LocPRB --alpha 0.85 --appr_eps 8.33e-06 --T 10000 --lr1 0.0073 --lr2 0.0004 --runs 10 --workers 10
 ```
 
 ## Alpha Ablation
@@ -135,10 +135,10 @@ python main.py --graph_name MovieLens --method FastPRB --alpha 0.85 --appr_eps 8
 Run `main.py` with the same dataset and hyperparameters while changing `--alpha`.
 
 ```bash
-python main.py --graph_name MovieLens --method FastPRB --alpha 0.60 --appr_eps 8.33e-05 --T 10000 --lr1 0.0073 --lr2 0.0004 --runs 10 --workers 10
-python main.py --graph_name MovieLens --method FastPRB --alpha 0.70 --appr_eps 8.33e-05 --T 10000 --lr1 0.0073 --lr2 0.0004 --runs 10 --workers 10
-python main.py --graph_name MovieLens --method FastPRB --alpha 0.85 --appr_eps 8.33e-05 --T 10000 --lr1 0.0073 --lr2 0.0004 --runs 10 --workers 10
-python main.py --graph_name MovieLens --method FastPRB --alpha 0.90 --appr_eps 8.33e-05 --T 10000 --lr1 0.0073 --lr2 0.0004 --runs 10 --workers 10
+python main.py --graph_name MovieLens --method LocPRB --alpha 0.60 --appr_eps 8.33e-05 --T 10000 --lr1 0.0073 --lr2 0.0004 --runs 10 --workers 10
+python main.py --graph_name MovieLens --method LocPRB --alpha 0.70 --appr_eps 8.33e-05 --T 10000 --lr1 0.0073 --lr2 0.0004 --runs 10 --workers 10
+python main.py --graph_name MovieLens --method LocPRB --alpha 0.85 --appr_eps 8.33e-05 --T 10000 --lr1 0.0073 --lr2 0.0004 --runs 10 --workers 10
+python main.py --graph_name MovieLens --method LocPRB --alpha 0.90 --appr_eps 8.33e-05 --T 10000 --lr1 0.0073 --lr2 0.0004 --runs 10 --workers 10
 ```
 
 ## Baseline Experiments
@@ -193,13 +193,13 @@ Use the unified plotting entry point for active result formats:
 python -m src.plot_results baseline --result-dir results/baselines_prb_style --datasets MovieLens --methods EE-Net NeuralUCB NeuralTS
 ```
 
-For online PRB/FastPRB runs, pass one or more run directories or `final_results.npy` files:
+For online PRB/LocPRB runs, pass one or more run directories or `final_results.npy` files:
 
 ```bash
 python -m src.plot_results online \
-  results/online_link_prediction/MovieLens_FastPRB_alpha0.85_eps8.33e-05_T10000_lr10.0073_lr20.0004_202601291141 \
+  results/online_link_prediction/MovieLens_LocPRB_alpha0.85_eps8.33e-05_T10000_lr10.0073_lr20.0004_202601291141 \
   results/online_link_prediction/MovieLens_PRB_alpha0.85_powT50_T10000_lr10.0073_lr20.0004_202601290025 \
-  --name MovieLens_PRB_vs_FastPRB
+  --name MovieLens_PRB_vs_LocPRB
 ```
 
 Plots are written to `results/plots/` by default.
@@ -281,7 +281,7 @@ Use these checks after structural changes:
 ```bash
 python -m py_compile main.py online_baselines_run.py src/*.py src/baselines_new/*.py
 python archive/maintenance_scripts/results_manifest.py
-python main.py --graph_name MovieLens --method FastPRB --alpha 0.85 --appr_eps 8.33e-05 --T 1 --lr1 0.0073 --lr2 0.0004 --runs 1 --workers 1
+python main.py --graph_name MovieLens --method LocPRB --alpha 0.85 --appr_eps 8.33e-05 --T 1 --lr1 0.0073 --lr2 0.0004 --runs 1 --workers 1
 python online_baselines_run.py --datasets MovieLens --methods EE-Net --T 1 --runs 1 --workers 1
 ```
 

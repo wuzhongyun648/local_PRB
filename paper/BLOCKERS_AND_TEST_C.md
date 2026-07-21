@@ -1,18 +1,16 @@
-# Baseline-v2 阻塞问题与 Test C 计划
+# 当前基线阻塞问题与 Test C 计划
 
-本文档记录在完整运行 `PRB`、`LocPRB+A8` 和 `dyn-LocPRB+A8` 前必须解决的问题，以及随后 Test C 的实验目的和设计。本文档只定义后续工作，不代表这些修改已经实现。
+本文档记录在完整运行 `PRB`、`LocPRB` 和 `dyn_locPRB` 前必须解决的问题，以及随后 Test C 的实验目的和设计。本文档只定义后续工作，不代表这些修改已经实现。
 
 ## 当前基线
 
 后续工程基线统一从 `src/main.py` 启动，包含三个入口：
 
-- `PRB`：power iteration，不应用 A8。
-- `LocPRB`：scratch APPR，默认对 personalization/source vector 做 L1 normalization（A8）。
-- `dyn_locPRB`：DYN-APPR，使用与 `LocPRB` 相同的 A8。
+- `PRB`：power iteration，使用 EE-Net 产生的原始 personalization/source vector。
+- `LocPRB`：scratch APPR，使用相同的原始 source vector。
+- `dyn_locPRB`：DYN-APPR，使用与 `LocPRB` 相同的原始 source vector。
 
-`main_B.py` 不再作为正式入口。A1、A3、A6 和 B5 只保留在 TestA/TestB 历史实验中。
-
-A8 会改变 source 和 residual 的数值尺度。在固定 `appr_eps` 下，它可能改变 active residual 数量、push 工作量和近似误差，因此不能只描述为代码级加速。完整实验前需要确认是否沿用当前 epsilon，或者重新标定归一化后的 epsilon。
+`main_B.py` 不再作为正式入口。A1-A9 和 B1-B5 只保留在 TestA/TestB 历史实验中；A10 对应的 DYN-APPR 保留为独立方法入口。
 
 ## 完整实验前的阻塞问题
 
@@ -60,7 +58,7 @@ TestA 衡量单个实现组件，TestB 衡量经验组合，Test C 用于确认�
 
 | 实验 | 相对前一版本的修改 | 主要回答的问题 |
 |---|---|---|
-| C0 | Baseline-v2：`LocPRB+A8` 与 `dyn-LocPRB+A8` | 修复阻塞问题后的工程基线是多少 |
+| C0 | 当前基线：`LocPRB` 与 `dyn_locPRB` | 修复阻塞问题后的工程基线是多少 |
 | C1 | 每轮所有 candidate edge 共享同一个 serving node | 当前 arm 构造是否符合论文的局部 link prediction 定义 |
 | C2 | 图从冷启动/明确 warm start 开始，并只按在线事件插边 | 方法是否真的在动态增长图上工作 |
 | C3 | 负采样只使用当前时刻可见信息 | 完整图或未来边信息是否造成泄漏 |
@@ -73,10 +71,9 @@ TestA 衡量单个实现组件，TestB 衡量经验组合，Test C 用于确认�
 ## C 组开始前必须决定的协议
 
 1. 图初始化采用空图+self-loop、明确 warm start，还是为零度节点定义单独转移规则。若论文继续声称冷启动，建议空图+self-loop，并明确 self-loop 不计入 link edge。
-2. A8 后的 `appr_eps` 是保持数值不变，还是根据 source scale 重新标定。两种设置不能混在同一结论中。
-3. 时间主表使用 Online Time 还是 End-to-End Time。建议两者都报告，Online Time 作为算法效率主指标。
-4. regret 主表使用 mistake regret 还是论文 pseudo-regret。建议两者都保存，论文理论对照使用 pseudo-regret。
-5. validation seeds 与最终 test seeds 必须互斥；TestA/TestB 使用过的 seeds 不再用于最终显著性结论。
+2. 时间主表使用 Online Time 还是 End-to-End Time。建议两者都报告，Online Time 作为算法效率主指标。
+3. regret 主表使用 mistake regret 还是论文 pseudo-regret。建议两者都保存，论文理论对照使用 pseudo-regret。
+4. validation seeds 与最终 test seeds 必须互斥；TestA/TestB 使用过的 seeds 不再用于最终显著性结论。
 
 ## 建议执行顺序
 

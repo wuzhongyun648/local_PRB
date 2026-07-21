@@ -6,9 +6,9 @@
 
 项目研究超大图在线 link prediction 中 PRB、LocPRB 和 DYN-LocPRB 的 regret、accuracy 与运行时间。当前工作路线是：
 
-1. 固定简化后的工程基线 `Baseline-v2`。
+1. 固定回归原始 source 尺度后的工程基线。
 2. 修复数据流、测试集和计时协议中的阻塞问题。
-3. 完整运行 PRB、LocPRB+A8、DYN-LocPRB+A8。
+3. 完整运行 PRB、LocPRB、DYN-LocPRB。
 4. 最后执行 Test C，判断严格论文协议对结果的影响。
 
 论文文件：
@@ -28,13 +28,13 @@ python main.py ...
 
 `main.py` 是 `src.main.main()` 的薄封装。`src/main.py` 支持三个方法：
 
-| CLI method | 实现 | A8 |
+| CLI method | 实现 | Source |
 |---|---|---|
-| `PRB` | power iteration | 不使用 |
-| `LocPRB` | 每轮 scratch APPR | 默认使用 |
-| `dyn_locPRB` | 跨轮维护状态的 DYN-APPR | 默认使用 |
+| `PRB` | power iteration | EE-Net 原始输出 |
+| `LocPRB` | 每轮 scratch APPR | EE-Net 原始输出 |
+| `dyn_locPRB` | 跨轮维护状态的 DYN-APPR | EE-Net 原始输出 |
 
-兼容 alias `FastPRB` 会映射到 `LocPRB`，`dyn-LocPRB` 和 `DynLocPRB` 会映射到 `dyn_locPRB`。
+静态局部方法统一使用 `LocPRB`，`dyn-LocPRB` 和 `DynLocPRB` 会映射到 `dyn_locPRB`。
 
 核心文件：
 
@@ -48,17 +48,9 @@ python main.py ...
 
 ## 3. 已确定的实现决策
 
-### A8 成为 LocPRB 默认行为
+### 正式基线不使用 A8
 
-`src/main.py::prepare_ppr_source()` 对 LocPRB 和 DYN-LocPRB 的 personalization/source vector 做 L1 normalization：
-
-```text
-s <- s / ||s||_1
-```
-
-PRB 保持原 source，不应用 A8。在线决策和周期 accuracy evaluation 使用一致的规则。
-
-A8 会改变 residual 的尺度。在固定 `appr_eps` 下，它可能同时改变 push 数、运行时间和实际近似误差，因此不能只描述为代码级加速。完整实验前仍需决定是否重新标定 epsilon。
+PRB、LocPRB 和 DYN-LocPRB 均直接使用 EE-Net 输出构造的原始 personalization/source vector。正式路径不做 L1 normalization。A8 只保留在归档的 TestA 历史消融中。
 
 ### B5 不再是正式方法
 
@@ -96,9 +88,9 @@ DYN 是 LocPRB 的传播后端，不应被解释为新的学习模型。理想�
 
 - MovieLens LocPRB、DYN-LocPRB：`10 x 10000 x 5`。
 - AmazonFashion LocPRB、DYN-LocPRB：`10 x 5000 x 5`。
-- Collab LocPRB、DYN-LocPRB、旧 FastPRB 控制组：`10 x 5000 x 5`。
+- Collab LocPRB、DYN-LocPRB、旧版局部方法控制组：`10 x 5000 x 5`。
 
-重要：六个 Loc/DYN 结果产生于 A8 成为正式默认设置之前，不是 Baseline-v2 最终结果，只能作为历史参考。
+六个 Loc/DYN 结果与当前未归一化 source 的算法设置一致，但仍存在数据流、测试集和计时协议差异，只能作为历史参考，不能作为最终公平结果。
 
 其他保留结果：
 
@@ -159,7 +151,7 @@ Test C 的目的不是继续寻找最好组件，而是确认结果在论文的�
 
 | 实验 | 修改 |
 |---|---|
-| C0 | 修复阻塞问题后的 Baseline-v2 |
+| C0 | 修复阻塞问题后的当前基线 |
 | C1 | 每轮 candidate edge 共享 serving node |
 | C2 | 冷启动/明确 warm start，并按在线事件插边 |
 | C3 | 负采样只使用当前可见信息 |
@@ -175,8 +167,8 @@ Test C 的目的不是继续寻找最好组件，而是确认结果在论文的�
 2. 修复 P0 数据协议问题并增加无重叠、一致事件流测试。
 3. 给 DYN 增加更新覆盖率、误差和决策分歧统计。
 4. 每个数据集执行 `T=100, runs=1, workers=1` smoke test。
-5. 明确 A8 后 epsilon、图初始化、时间和 regret 的最终口径。
-6. 在同一协议下完整运行 PRB、LocPRB+A8、DYN-LocPRB+A8。
+5. 明确图初始化、时间和 regret 的最终口径。
+6. 在同一协议下完整运行 PRB、LocPRB、DYN-LocPRB。
 7. 运行 C1-C6 的 T=1000 消融，再完整运行 C0 与 CP6。
 8. 用独立 test seeds 汇报 paired delta、置信区间、Regret-Rounds 和 Accuracy-Time。
 

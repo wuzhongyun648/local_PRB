@@ -66,7 +66,6 @@ GRAPH_BY_DATASET = {
 METHOD_ALIASES = {
     "PRB": "PRB",
     "LocPRB": "LocPRB",
-    "FastPRB": "LocPRB",
     "dyn_locPRB": "dyn_locPRB",
     "dyn-LocPRB": "dyn_locPRB",
     "DynLocPRB": "dyn_locPRB",
@@ -82,15 +81,6 @@ def parse_method(value):
         raise argparse.ArgumentTypeError(
             f"unknown method {value!r}; choose one of: {choices}"
         ) from exc
-
-
-def prepare_ppr_source(source, method):
-    """L1-normalize the personalization vector used by LocPRB solvers."""
-    if method in ("LocPRB", "dyn_locPRB"):
-        norm = np.sum(np.abs(source))
-        if norm != 0.0:
-            return source / norm
-    return source
 
 
 def build_ee_net(dim, n_arm, args, kernel_size):
@@ -130,7 +120,7 @@ def parse_arguments():
     Parses and validates command-line arguments for the experiment.
 
     This function defines the available hyperparameters, dataset options, and 
-    algorithm choices (FastPRB vs. PRB). It also enforces constraints, such as 
+    algorithm choices (LocPRB vs. PRB). It also enforces constraints, such as
     mutual exclusivity between the approximation error (epsilon) and power 
     iteration steps.
     """
@@ -140,7 +130,7 @@ def parse_arguments():
     parser.add_argument('--alpha', type=float, required=True, help='PPR alpha (Damping factor)')
     
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument('--appr_eps', type=float, help='Epsilon for FastPRB (APPR)')
+    group.add_argument('--appr_eps', type=float, help='Epsilon for LocPRB (APPR)')
     group.add_argument('--power_T', type=int, help='Iterations for PRB (Power Iteration)')
     parser.add_argument('--T', type=int, default=DEFAULT_MAIN_T, help='Total rounds')
     parser.add_argument('--lr1', type=float, required=True, help='Learning rate for exploitation')
@@ -281,7 +271,6 @@ def run_experiment(run_id,args, save_dir):
                     if isinstance(val, (list, np.ndarray)): val = val[0]
                     t_h_dense[real_id] = val
                 
-                t_h_dense = prepare_ppr_source(t_h_dense, args.method)
                 if args.method in ('LocPRB', 'dyn_locPRB'):
                     t_degree = np.array(graph_manager.degree).flatten().astype(np.int64)
                     t_degree[t_degree == 0] = 1
@@ -344,7 +333,6 @@ def run_experiment(run_id,args, save_dir):
         current_p = None
         ppr_dt = 0.0
         
-        h_dense = prepare_ppr_source(h_dense, args.method)
         if args.method in ('LocPRB', 'dyn_locPRB'):
             ppr_t0 = time.perf_counter()
             degree = np.array(graph_manager.degree).flatten().astype(np.int64)
