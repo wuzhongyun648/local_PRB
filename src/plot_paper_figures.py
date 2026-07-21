@@ -15,7 +15,7 @@ FINAL_DATA_DIR = Path(RESULTS_DIR) / "final" / "data"
 GENERATED_PLOT_DIR = Path(RESULTS_DIR) / "final" / "plots" / "generated"
 
 RUN_RE = re.compile(
-    r"^(?P<dataset>.+?)_(?P<method>FastPRB|PRB)(?:_compareGraph)?_"
+    r"^(?P<dataset>.+?)_(?P<method>(?:Loc|Fast)PRB|PRB)(?:_compareGraph)?_"
     r"alpha(?P<alpha>[^_]+)_(?P<param>eps[^_]+|powT[^_]+)_"
     r"T(?P<T>\d+)"
 )
@@ -29,7 +29,7 @@ DATASET_DISPLAY = {
 
 COLORS = {
     "PRB": "#0072B2",
-    "FastPRB": "#D55E00",
+    "LocPRB": "#D55E00",
 }
 
 
@@ -46,6 +46,8 @@ def parse_run_dir(path):
         return None
     parsed = match.groupdict()
     parsed["dataset"] = normalize_dataset(parsed["dataset"])
+    if parsed["method"] != "PRB":
+        parsed["method"] = "LocPRB"
     parsed["path"] = Path(path)
     return parsed
 
@@ -121,10 +123,10 @@ def plot_main_regret(runs, output_dir):
     written = []
     for dataset, filename in specs:
         prb = choose_run(runs, dataset, "PRB", alpha="0.85", param="powT50")
-        fast = choose_run(runs, dataset, "FastPRB", alpha="0.85")
+        loc = choose_run(runs, dataset, "LocPRB", alpha="0.85")
         curves = [
             ("PRB", load_summary(prb["result_path"]), COLORS["PRB"], (0, (3, 2))),
-            ("LocPRB", load_summary(fast["result_path"]), COLORS["FastPRB"], "-"),
+            ("LocPRB", load_summary(loc["result_path"]), COLORS["LocPRB"], "-"),
         ]
         output_base = output_dir / filename
         plot_regret_curves(curves, output_base, DATASET_DISPLAY[dataset])
@@ -144,7 +146,7 @@ def plot_eps_ablation(runs, output_dir):
     palette = ["#7F3C8D", "#11A579", "#3969AC", "#F2B701", "#E73F74", "#80BA5A"]
     curves = []
     for (label, eps), color in zip(specs, palette):
-        run = choose_run(runs, "Collab", "FastPRB", alpha="0.85", param=f"eps{eps}")
+        run = choose_run(runs, "Collab", "LocPRB", alpha="0.85", param=f"eps{eps}")
         curves.append((label, load_summary(run["result_path"]), color, "-"))
     output_base = output_dir / "ogbl-Collab_Eps_Ablation_Regret_vs_Rounds"
     plot_regret_curves(curves, output_base, "ogbl-Collab")
@@ -155,7 +157,7 @@ def plot_alpha_ablation(runs, output_dir):
     specs = ["0.6", "0.7", "0.8", "0.9"]
     palette = ["#3969AC", "#11A579", "#F2B701", "#E73F74"]
     written = []
-    for method, label_prefix in [("PRB", "PRB"), ("FastPRB", "LocPRB")]:
+    for method, label_prefix in [("PRB", "PRB"), ("LocPRB", "LocPRB")]:
         curves = []
         for alpha, color in zip(specs, palette):
             param = "powT50" if method == "PRB" else "eps4.24e-06"
