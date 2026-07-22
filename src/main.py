@@ -254,6 +254,11 @@ def run_experiment(run_id,args, save_dir):
     )
     resolved_backend = 'scipy' if args.method == 'PRB' else args.ppr_backend
     scratch_kernel = (
+        ppr_solver.get_timing_kernel(args.ppr_backend)
+        if args.method in ('LocPRB', 'dyn_locPRB')
+        else None
+    )
+    diagnostic_scratch_kernel = (
         ppr_solver.get_appr_kernel(args.ppr_backend)
         if args.method in ('LocPRB', 'dyn_locPRB')
         else None
@@ -270,6 +275,12 @@ def run_experiment(run_id,args, save_dir):
             auto_record=False,
         )
         if args.method == 'dyn_locPRB'
+        else None
+    )
+    dynamic_fast_workspace = None
+    dynamic_fast_impl = (
+        ppr_solver.get_reuse_queue_kernel(args.ppr_backend)
+        if dynamic_solver is not None
         else None
     )
     results_list = [] # [time, regret, loss1, loss2, ppr_norm]
@@ -320,6 +331,7 @@ def run_experiment(run_id,args, save_dir):
                 np.zeros(num_nodes + 1, dtype=np.int64),
                 np.zeros(num_nodes + 1, dtype=np.bool_),
                 True,
+                True,
             )
             source_pressure_reset(
                 np.empty(0, dtype=np.int64),
@@ -328,6 +340,18 @@ def run_experiment(run_id,args, save_dir):
                 warm_source,
                 warm_degree,
                 args.appr_eps,
+            )
+            dynamic_fast_impl(
+                num_nodes,
+                P_current_csr.indptr,
+                P_current_csr.indices,
+                warm_degree,
+                warm_source,
+                args.alpha,
+                args.appr_eps,
+                np.empty(0, dtype=np.int64),
+                np.zeros(num_nodes + 1, dtype=np.int64),
+                np.zeros(num_nodes + 1, dtype=np.bool_),
             )
         warmup_seconds = time.perf_counter() - warmup_t0
 
@@ -476,23 +500,40 @@ def run_experiment(run_id,args, save_dir):
         ppr_accounting_dt = 0.0
         diagnostic_dt = 0.0
         scratch_diagnostic_p = None
+        external_fast_reset_stats = None
         
         if args.method in ('LocPRB', 'dyn_locPRB'):
             ppr_t0 = time.perf_counter()
             degree = np.array(graph_manager.degree).flatten().astype(np.int64)
             degree[degree == 0] = 1
             if args.method == 'dyn_locPRB':
-                current_p = dynamic_solver.solve(
-                    num_nodes,
-                    P_current_csr.indptr,
-                    P_current_csr.indices,
-                    degree,
-                    h_dense,
-                    args.alpha,
-                    args.appr_eps,
-                    source_indices=source_indices,
-                    changed_nodes_hint=dynamic_changed_nodes_hint,
-                )
+                if dynamic_fast_workspace is not None:
+                    fast_queue, fast_queued = dynamic_fast_workspace
+                    external_fast_reset_stats = dynamic_fast_impl(
+                        num_nodes,
+                        P_current_csr.indptr,
+                        P_current_csr.indices,
+                        degree,
+                        h_dense,
+                        args.alpha,
+                        args.appr_eps,
+                        source_indices,
+                        fast_queue,
+                        fast_queued,
+                    )
+                    current_p = external_fast_reset_stats[0]
+                else:
+                    current_p = dynamic_solver.solve(
+                        num_nodes,
+                        P_current_csr.indptr,
+                        P_current_csr.indices,
+                        degree,
+                        h_dense,
+                        args.alpha,
+                        args.appr_eps,
+                        source_indices=source_indices,
+                        changed_nodes_hint=dynamic_changed_nodes_hint,
+                    )
             else:
                 current_p, scratch_pushes, scratch_edge_visits, scratch_active = scratch_kernel(
                     num_nodes,
@@ -507,7 +548,23 @@ def run_experiment(run_id,args, save_dir):
             ppr_dt = time.perf_counter() - ppr_t0
             accounting_t0 = time.perf_counter()
             if args.method == 'dyn_locPRB':
-                dynamic_solver.record_last_stats()
+                if external_fast_reset_stats is None:
+                    dynamic_solver.record_last_stats()
+                else:
+                    dynamic_solver.record_external_fast_reset(
+                        len(source_indices),
+                        external_fast_reset_stats[3],
+                        external_fast_reset_stats[1],
+                        external_fast_reset_stats[2],
+                    )
+                if (
+                    dynamic_fast_workspace is None
+                    and dynamic_solver.fast_reset_locked
+                ):
+                    dynamic_fast_workspace = (
+                        dynamic_solver.queue,
+                        dynamic_solver.queued,
+                    )
             else:
                 timing_breakdown['scratch_solves'] += 1
                 timing_breakdown['scratch_pushes'] += int(scratch_pushes)
@@ -521,7 +578,7 @@ def run_experiment(run_id,args, save_dir):
             ):
                 diagnostic_t0 = time.perf_counter()
                 scratch_diagnostic_p, scratch_pushes, _, _ = (
-                    scratch_kernel(
+                    diagnostic_scratch_kernel(
                         num_nodes,
                         P_current_csr.indptr,
                         P_current_csr.indices,

@@ -8,7 +8,9 @@ from src.ppr_solver import (
     NUMBA_AVAILABLE,
     appr_with_diagnostics,
     get_appr_kernel,
+    get_reuse_queue_kernel,
     get_scratch_into_kernel,
+    get_timing_kernel,
 )
 
 
@@ -78,6 +80,27 @@ class PPRBackendContractTests(unittest.TestCase):
         )
         np.testing.assert_array_equal(full[0], sparse[0])
         self.assertEqual(full[1:], sparse[1:])
+
+    def test_uninstrumented_kernels_match_diagnostic_output(self):
+        graph, degree = path_graph()
+        source = np.array([1.0, 0.0, -0.25])
+        support = np.array([0, 2], dtype=np.int64)
+        expected = appr_with_diagnostics(
+            3, graph.indptr, graph.indices, degree, source, 0.85, 1e-4,
+            backend="python", seed_nodes=support,
+        )[0]
+        timed = get_timing_kernel("python")(
+            3, graph.indptr, graph.indices, degree, source, 0.85, 1e-4,
+            support,
+        )
+        reused = get_reuse_queue_kernel("python")(
+            3, graph.indptr, graph.indices, degree, source, 0.85, 1e-4,
+            support, np.zeros(4, dtype=np.int64), np.zeros(4, dtype=np.bool_),
+        )
+        np.testing.assert_array_equal(timed[0], expected)
+        np.testing.assert_array_equal(reused[0], expected)
+        self.assertEqual(timed[1:4], (0, 0, 0))
+        self.assertEqual(reused[1:4], (0, 0, 0))
 
     def test_sparse_dynamic_hints_match_legacy_scans(self):
         graph, degree = path_graph()
@@ -152,6 +175,7 @@ class PPRBackendContractTests(unittest.TestCase):
         self.assertTrue(solver.last_stats["adaptive_reset"])
         self.assertEqual(solver.stats["adaptive_resets"], 1)
         self.assertEqual(solver.stats["insert_updates"], 0)
+        self.assertFalse(np.any(solver.queued))
 
 
 if __name__ == "__main__":

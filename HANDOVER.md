@@ -232,6 +232,12 @@ python -m src.plot_locprb_comparison \
 > workspace；这属于算法/求解策略变化，不能再按本节所述的纯 DYN 解读。短结果与
 > 触发率见 `benchmarks/ADAPTIVE_DYN_T100.md`。
 
+> 最终 T=1000 版本进一步加入连续三次 reset 后的锁定 scratch 快路径，并将双方
+> work-counter instrumentation 移出生产求解计时。该版本七数据集均满足
+> Numba-DYN < Numba-Loc，且 paired regret 完全一致。完整口径、结果与 PRB Option A
+> 局限见 `benchmarks/T1000_FINAL_NUMBA_VALIDATION.md`。后续不得把它简称为“纯 DYN”
+> 或隐去 996/1000 轮使用锁定 scratch 路径的事实。
+
 ### 当前代码状态
 
 - 当前性能诊断提交为 `519fd0f perf: compile and diagnose dynamic APPR`。

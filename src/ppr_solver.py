@@ -32,14 +32,15 @@ def power_iteration(P: sp.spmatrix, alpha: float, h: np.ndarray, t: int) -> np.n
 @njit(cache=True)
 def _appr_scratch_into(
     indptr, indices, degree, h, alpha, eps, seed_nodes,
-    p, r, queue, q_mark, clear_workspace,
+    p, r, queue, q_mark, clear_workspace, collect_stats,
 ):
     """Scratch APPR core shared by allocating and reusable workspaces."""
     num_nodes = len(p)
     if clear_workspace:
         p.fill(0.0)
         r.fill(0.0)
-        q_mark.fill(False)
+        # A completed push drains the queue and clears every queued mark, so a
+        # reusable workspace does not need an O(n) boolean-array reset.
     front = 0
     rear = 0
     push_count = 0
@@ -54,7 +55,8 @@ def _appr_scratch_into(
                 queue[rear] = idx
                 rear = (rear + 1) % (num_nodes + 1)
                 q_mark[idx] = True
-                initial_active += 1
+                if collect_stats:
+                    initial_active += 1
     else:
         for seed_idx in range(len(seed_nodes)):
             idx = seed_nodes[seed_idx]
@@ -64,7 +66,8 @@ def _appr_scratch_into(
                 queue[rear] = idx
                 rear = (rear + 1) % (num_nodes + 1)
                 q_mark[idx] = True
-                initial_active += 1
+                if collect_stats:
+                    initial_active += 1
     
     while (rear - front) != 0: 
         u = queue[front]
@@ -73,12 +76,14 @@ def _appr_scratch_into(
         r_val = r[u]
         if eps * degree[u] > np.abs(r[u]):
             continue
-        push_count += 1
+        if collect_stats:
+            push_count += 1
         p[u] += r_val * (1. - alpha) 
         r[u] = 0.0
         push_val = alpha * r_val / degree[u]
         for v in indices[indptr[u]:indptr[u + 1]]:
-            edge_visits += 1
+            if collect_stats:
+                edge_visits += 1
             r[v] += push_val
             if not q_mark[v] and eps * degree[v] <= np.abs(r[v]):
                 queue[rear] = v
@@ -98,7 +103,7 @@ def _appr_diagnostics(
     q_mark = np.zeros(num_nodes + 1, dtype=np.bool_)
     result = _appr_scratch_into(
         indptr, indices, degree, h, alpha, eps, seed_nodes,
-        p, r, queue, q_mark, False,
+        p, r, queue, q_mark, False, True,
     )
     return result[0], result[1], result[2], result[3]
 
@@ -113,9 +118,64 @@ def _appr_diagnostics_python(
     core = getattr(_appr_scratch_into, "py_func", _appr_scratch_into)
     result = core(
         indptr, indices, degree, h, alpha, eps, seed_nodes,
-        p, r, queue, q_mark, False,
+        p, r, queue, q_mark, False, True,
     )
     return result[0], result[1], result[2], result[3]
+
+
+@njit(cache=True)
+def _appr_scratch_reuse_queue(
+    num_nodes, indptr, indices, degree, h, alpha, eps, seed_nodes,
+    queue, q_mark,
+):
+    """Allocate output state but reuse the queue workspace."""
+    p = np.zeros(num_nodes)
+    r = np.zeros(num_nodes)
+    return _appr_scratch_into(
+        indptr, indices, degree, h, alpha, eps, seed_nodes,
+        p, r, queue, q_mark, False, False,
+    )
+
+
+def _appr_scratch_reuse_queue_python(
+    num_nodes, indptr, indices, degree, h, alpha, eps, seed_nodes,
+    queue, q_mark,
+):
+    p = np.zeros(num_nodes)
+    r = np.zeros(num_nodes)
+    core = getattr(_appr_scratch_into, "py_func", _appr_scratch_into)
+    return core(
+        indptr, indices, degree, h, alpha, eps, seed_nodes,
+        p, r, queue, q_mark, False, False,
+    )
+
+
+@njit(cache=True)
+def _appr_timing(
+    num_nodes, indptr, indices, degree, h, alpha, eps, seed_nodes=None
+):
+    p = np.zeros(num_nodes)
+    r = np.zeros(num_nodes)
+    queue = np.zeros(num_nodes + 1, dtype=np.int64)
+    q_mark = np.zeros(num_nodes + 1, dtype=np.bool_)
+    return _appr_scratch_into(
+        indptr, indices, degree, h, alpha, eps, seed_nodes,
+        p, r, queue, q_mark, False, False,
+    )
+
+
+def _appr_timing_python(
+    num_nodes, indptr, indices, degree, h, alpha, eps, seed_nodes=None
+):
+    p = np.zeros(num_nodes)
+    r = np.zeros(num_nodes)
+    queue = np.zeros(num_nodes + 1, dtype=np.int64)
+    q_mark = np.zeros(num_nodes + 1, dtype=np.bool_)
+    core = getattr(_appr_scratch_into, "py_func", _appr_scratch_into)
+    return core(
+        indptr, indices, degree, h, alpha, eps, seed_nodes,
+        p, r, queue, q_mark, False, False,
+    )
 
 
 def get_appr_kernel(backend="auto"):
@@ -145,6 +205,36 @@ def get_scratch_into_kernel(backend="auto"):
         return _appr_scratch_into
     if backend == "python":
         return getattr(_appr_scratch_into, "py_func", _appr_scratch_into)
+    raise ValueError(f"Unknown PPR backend: {backend!r}")
+
+
+def get_reuse_queue_kernel(backend="auto"):
+    """Resolve scratch APPR that reuses only queue/mark workspaces."""
+    if backend == "auto":
+        backend = "numba" if NUMBA_AVAILABLE else "python"
+    if backend == "numba":
+        if not NUMBA_AVAILABLE:
+            raise RuntimeError(
+                "The numba PPR backend was requested, but numba is unavailable"
+            )
+        return _appr_scratch_reuse_queue
+    if backend == "python":
+        return _appr_scratch_reuse_queue_python
+    raise ValueError(f"Unknown PPR backend: {backend!r}")
+
+
+def get_timing_kernel(backend="auto"):
+    """Resolve scratch APPR without work-counter instrumentation."""
+    if backend == "auto":
+        backend = "numba" if NUMBA_AVAILABLE else "python"
+    if backend == "numba":
+        if not NUMBA_AVAILABLE:
+            raise RuntimeError(
+                "The numba PPR backend was requested, but numba is unavailable"
+            )
+        return _appr_timing
+    if backend == "python":
+        return _appr_timing_python
     raise ValueError(f"Unknown PPR backend: {backend!r}")
 
 

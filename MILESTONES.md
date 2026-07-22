@@ -177,7 +177,10 @@ source delta、历史 residual、数组分配、push/edge visits 和自适应 sc
   DYN < Loc；其余五个仍未达到。除 PPA 外 regret/决策完全一致；PPA regret 相差 1，
   有 10/100 次决策分歧。详见 `benchmarks/ADAPTIVE_DYN_T100.md`。
 
-状态：进行中（自适应短验证完成，进入 T=1000 判断）。
+最终 T=1000 结果：七数据集均达到 Numba-DYN < Numba-Loc，regret 逐项完全一致；
+实现细节和算法变更见 `benchmarks/T1000_FINAL_NUMBA_VALIDATION.md`。
+
+状态：完成。
 
 ## Milestone 4：`T=1000` 验证
 
@@ -194,7 +197,16 @@ source delta、历史 residual、数组分配、push/edge visits 和自适应 sc
 - 若 Numba 路线未满足，给出是否进入 Python 备选路线的明确结论。
 - 本阶段到此结束，不自动启动最终完整实验。
 
-状态：未开始。
+结果：
+
+- 完成七数据集、seed 0、Numba Loc/DYN 的 T=1000 串行配对验证。
+- 七数据集均满足 DYN < Loc 的隔离 PPR 时间不等式；合计快 41.1%。
+- Loc/DYN regret 七数据集完全一致；700 个诊断决策比较无分歧。
+- 方案 A 的六个可用 PRB PPR 折算和 PPA online time 均远慢于 Loc，支持 interim
+  `Loc < PRB`；但 PRB 尚不是统一 paired rerun，PPA regret 尤其只能标记为 partial。
+- 选定 Numba 路线进入最终三版本；不启动 Test C 或完整论文实验。
+
+状态：完成（PRB 公平重跑留给最终完整实验）。
 
 ## Milestone 完成记录
 
@@ -203,5 +215,5 @@ source delta、历史 residual、数组分配、push/edge visits 和自适应 sc
 | 0 PRB 参照 | 完成 | 待本次提交 | `benchmarks/prb_option_a_reference.json` | 采用方案 A；PPA 标记为 partial |
 | 1 统一口径 | 完成 | `e5ff896` | 7 tests + MovieLens T=1 四路 smoke | 显式后端、预热、结构化计时已完成 |
 | 2 短诊断 | 完成 | `62cd631` | `benchmarks/BACKEND_DIAGNOSIS_T20_T100.md` | 已定位 source delta 导致的额外 push |
-| 3 Numba 优化 | 进行中 | 待本次提交 | T=20 七数据集 + 9 tests | 纯实现优化后 2/7 达到 DYN < Loc |
-| 4 T=1000 | 未开始 | 待定 | 待定 | 待定 |
+| 3 Numba 优化 | 完成 | 待本次提交 | 10 tests + 自适应/锁定快路径 | 明确改变求解策略，最终七数据集过线 |
+| 4 T=1000 | 完成 | 待本次提交 | `benchmarks/T1000_FINAL_NUMBA_VALIDATION.md` | 选定 Numba 三版本；PRB 为 Option A interim |

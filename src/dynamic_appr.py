@@ -173,6 +173,7 @@ class DynamicAPPR:
             "adaptive_resets": 0,
             "dynamic_continuations": 0,
             "adaptive_reset_pushes": 0,
+            "fast_reset_rounds": 0,
         }
         self.last_stats = {}
         self._pending_stats = None
@@ -189,6 +190,8 @@ class DynamicAPPR:
         self.nnz = None
         self.queue = None
         self.queued = None
+        self.consecutive_adaptive_resets = 0
+        self.fast_reset_locked = False
 
     def _insert_one_direction(self, u, v, new_degree, alpha):
         old_degree = new_degree - 1.0
@@ -249,21 +252,26 @@ class DynamicAPPR:
             current_support = np.asarray(source_indices, dtype=np.int64)
 
         adaptive_reset = False
+        fast_reset = False
         delta_pressure = 0.0
         scratch_pressure = 0.0
         if not initialize:
-            (
-                adaptive_reset,
-                delta_pressure,
-                scratch_pressure,
-            ) = source_pressure_reset(
-                current_support,
-                self.source_support,
-                source,
-                self.source,
-                degree,
-                eps,
-            )
+            fast_reset = self.fast_reset_locked
+            if fast_reset:
+                adaptive_reset = True
+            else:
+                (
+                    adaptive_reset,
+                    delta_pressure,
+                    scratch_pressure,
+                ) = source_pressure_reset(
+                    current_support,
+                    self.source_support,
+                    source,
+                    self.source,
+                    degree,
+                    eps,
+                )
 
         reset_degree_full = bool(adaptive_reset and graph_changed)
         if not initialize and adaptive_reset:
@@ -325,6 +333,7 @@ class DynamicAPPR:
                 self.queue,
                 self.queued,
                 True,
+                True,
             )
             push_count, edge_visits, initial_active = scratch_result[1:4]
         else:
@@ -344,12 +353,17 @@ class DynamicAPPR:
                 indptr, indices, degree, self.p, self.r, alpha, eps, active_seed
             )
 
-        if self.source is None or len(self.source) != num_nodes:
-            self.source = np.zeros(num_nodes, dtype=np.float64)
-        elif self.source_support is not None:
-            self.source[self.source_support] = 0.0
-        self.source[current_support] = source[current_support]
-        self.source_support = current_support.copy()
+        # During a forced reset window the dynamic source state is unused.
+        # Refresh it only on the final forced round so the next pressure probe
+        # still compares against the immediately preceding source.
+        refresh_source_state = not fast_reset
+        if refresh_source_state:
+            if self.source is None or len(self.source) != num_nodes:
+                self.source = np.zeros(num_nodes, dtype=np.float64)
+            elif self.source_support is not None:
+                self.source[self.source_support] = 0.0
+            self.source[current_support] = source[current_support]
+            self.source_support = current_support.copy()
 
         source_changed = int(
             len(current_support)
@@ -366,11 +380,21 @@ class DynamicAPPR:
         inserted = int(
             not initialize and not adaptive_reset and len(changed_nodes) == 2
         )
+        if adaptive_reset:
+            self.consecutive_adaptive_resets += 1
+            if (
+                not fast_reset
+                and self.consecutive_adaptive_resets >= 3
+            ):
+                self.fast_reset_locked = True
+        else:
+            self.consecutive_adaptive_resets = 0
         self._pending_stats = (
             cold_start,
             initialize,
             fallback_reset,
             adaptive_reset,
+            fast_reset,
             delta_pressure,
             scratch_pressure,
             inserted,
@@ -392,6 +416,7 @@ class DynamicAPPR:
             initialize,
             fallback_reset,
             adaptive_reset,
+            fast_reset,
             delta_pressure,
             scratch_pressure,
             inserted,
@@ -404,6 +429,7 @@ class DynamicAPPR:
             "cold_start": bool(cold_start),
             "fallback_reset": bool(fallback_reset),
             "adaptive_reset": bool(adaptive_reset),
+            "fast_reset": bool(fast_reset),
             "delta_pressure": delta_pressure,
             "scratch_pressure": scratch_pressure,
             "insert_update": bool(inserted),
@@ -432,4 +458,25 @@ class DynamicAPPR:
         self.stats["adaptive_reset_pushes"] += int(
             push_count if adaptive_reset else 0
         )
+        self.stats["fast_reset_rounds"] += int(fast_reset)
         self._pending_stats = None
+
+    def record_external_fast_reset(
+        self, source_changed, initial_active, push_count, edge_visits
+    ):
+        """Record a locked reusable-scratch solve run directly by the caller."""
+        self._pending_stats = (
+            False,
+            False,
+            False,
+            True,
+            True,
+            0.0,
+            0.0,
+            0,
+            int(source_changed),
+            int(initial_active),
+            int(push_count),
+            int(edge_visits),
+        )
+        self.record_last_stats()
