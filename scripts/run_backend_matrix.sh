@@ -16,9 +16,11 @@ mkdir -p "$log_dir"
 master_log="$log_dir/master.log"
 resource_log="$log_dir/resources.log"
 
-datasets=(MovieLens Amazon_fashion Facebook Grqc Collab PPA Vessel)
-methods=(LocPRB dyn_locPRB)
-backends=(python numba)
+read -r -a datasets <<< "${DATASETS:-MovieLens Amazon_fashion Facebook Grqc Collab PPA Vessel}"
+read -r -a methods <<< "${METHODS:-LocPRB dyn_locPRB}"
+read -r -a backends <<< "${BACKENDS:-python numba}"
+diagnostics="${DIAGNOSTICS:-0}"
+diagnostic_every="${DIAGNOSTIC_EVERY:-1}"
 
 declare -A eps=(
   [MovieLens]=8.33e-05 [Amazon_fashion]=1.25e-04
@@ -56,6 +58,11 @@ for dataset in "${datasets[@]}"; do
   for backend in "${backends[@]}"; do
     for method in "${methods[@]}"; do
       name="${dataset}_${method}_${backend}"
+      extra_args=()
+      if [[ "$diagnostics" == "1" && "$method" == "dyn_locPRB" ]]; then
+        extra_args+=(--ppr_diagnostics --ppr_diagnostic_every "$diagnostic_every")
+        name="${name}_diagnostics"
+      fi
       snapshot_resources
       printf '[%s] START %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$name" | tee -a "$master_log"
       if CUDA_VISIBLE_DEVICES="$cuda_device" \
@@ -75,6 +82,7 @@ for dataset in "${datasets[@]}"; do
           --workers 1 \
           --seed "$seed" \
           --evaluation_every 0 \
+          "${extra_args[@]}" \
           > "$log_dir/${name}.log" 2>&1; then
         printf '[%s] DONE %s status=0\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$name" | tee -a "$master_log"
       else
