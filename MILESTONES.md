@@ -114,7 +114,7 @@ PRB regret 与时间参照，避免反复运行 PRB。
 - MovieLens `T=1` 的 Python/Numba Loc/DYN 四路真实入口 smoke test 均完成；同算法
   backend 的 regret、loss 和 PPR norm 完全一致，新旧结果与 JSON 均成功保存。
 
-状态：完成，等待本次提交记录 commit。
+状态：完成。实现 commit：`e5ff896`。
 
 ## Milestone 2：七数据集短诊断
 
@@ -174,7 +174,7 @@ source delta、历史 residual、数组分配、push/edge visits 和自适应 sc
 | Milestone | 状态 | Commit | 验证/结果 | 结论 |
 |---|---|---|---|---|
 | 0 PRB 参照 | 完成 | 待本次提交 | `benchmarks/prb_option_a_reference.json` | 采用方案 A；PPA 标记为 partial |
-| 1 统一口径 | 完成 | 待本次提交 | 7 tests + MovieLens T=1 四路 smoke | 显式后端、预热、结构化计时已完成 |
+| 1 统一口径 | 完成 | `e5ff896` | 7 tests + MovieLens T=1 四路 smoke | 显式后端、预热、结构化计时已完成 |
 | 2 短诊断 | 未开始 | 待定 | 待定 | 待定 |
 | 3 Numba 优化 | 未开始 | 待定 | 待定 | 待定 |
 | 4 T=1000 | 未开始 | 待定 | 待定 | 待定 |
