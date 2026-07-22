@@ -60,6 +60,59 @@ class PPRBackendContractTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Unknown PPR backend"):
             get_push_impl("invalid")
 
+    def test_sparse_scratch_seed_matches_full_scan(self):
+        graph, degree = path_graph()
+        source = np.array([1.0, 0.0, -0.25])
+        full = appr_with_diagnostics(
+            3, graph.indptr, graph.indices, degree, source, 0.85, 1e-4,
+            backend="python",
+        )
+        sparse = appr_with_diagnostics(
+            3, graph.indptr, graph.indices, degree, source, 0.85, 1e-4,
+            backend="python", seed_nodes=np.array([0, 2], dtype=np.int64),
+        )
+        np.testing.assert_array_equal(full[0], sparse[0])
+        self.assertEqual(full[1:], sparse[1:])
+
+    def test_sparse_dynamic_hints_match_legacy_scans(self):
+        graph, degree = path_graph()
+        legacy = DynamicAPPR(push_impl=get_push_impl("python"))
+        sparse = DynamicAPPR(push_impl=get_push_impl("python"))
+        for source, support in (
+            (np.array([1.0, 0.0, 0.0]), np.array([0], dtype=np.int64)),
+            (np.array([0.0, 0.75, -0.25]), np.array([1, 2], dtype=np.int64)),
+            (np.array([0.0, 0.0, 1.0]), np.array([2], dtype=np.int64)),
+        ):
+            expected = legacy.solve(
+                3, graph.indptr, graph.indices, degree, source, 0.85, 1e-4
+            )
+            actual = sparse.solve(
+                3, graph.indptr, graph.indices, degree, source, 0.85, 1e-4,
+                source_indices=support,
+                changed_nodes_hint=np.empty(0, dtype=np.int64),
+            )
+            np.testing.assert_array_equal(actual, expected)
+            np.testing.assert_array_equal(sparse.r, legacy.r)
+
+        triangle = graph.copy().tolil()
+        triangle[0, 2] = 1.0
+        triangle[2, 0] = 1.0
+        triangle = triangle.tocsr()
+        triangle_degree = np.asarray(triangle.sum(axis=1)).reshape(-1)
+        source = np.array([0.0, 1.0, 0.0])
+        expected = legacy.solve(
+            3, triangle.indptr, triangle.indices, triangle_degree,
+            source, 0.85, 1e-4,
+        )
+        actual = sparse.solve(
+            3, triangle.indptr, triangle.indices, triangle_degree,
+            source, 0.85, 1e-4,
+            source_indices=np.array([1], dtype=np.int64),
+            changed_nodes_hint=np.array([0, 2], dtype=np.int64),
+        )
+        np.testing.assert_array_equal(actual, expected)
+        np.testing.assert_array_equal(sparse.r, legacy.r)
+
 
 if __name__ == "__main__":
     unittest.main()

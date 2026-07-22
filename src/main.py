@@ -290,16 +290,18 @@ def run_experiment(run_id,args, save_dir):
                 warm_source,
                 args.alpha,
                 args.appr_eps,
+                np.empty(0, dtype=np.int64),
             )
         elif args.method == 'dyn_locPRB':
             push_impl(
                 P_current_csr.indptr,
                 P_current_csr.indices,
-                warm_degree.astype(np.float64),
+                warm_degree,
                 np.zeros(num_nodes, dtype=np.float64),
                 warm_source.copy(),
                 args.alpha,
                 args.appr_eps,
+                np.empty(0, dtype=np.int64),
             )
         warmup_seconds = time.perf_counter() - warmup_t0
 
@@ -313,6 +315,7 @@ def run_experiment(run_id,args, save_dir):
     latest_test_acc = 0.0
     # 从报告的 step_duration / Time / Total / TimeAcc 横轴中累计扣除：测试集构造 + 周期评测
     total_excluded_seconds = 0.0
+    dynamic_changed_nodes_hint = np.empty(0, dtype=np.int64)
     timing_breakdown = {
         'ppr_time': 0.0,
         'train_time': 0.0,
@@ -431,6 +434,12 @@ def run_experiment(run_id,args, save_dir):
             if isinstance(val, (list, np.ndarray)): val = val[0]
             
             h_dense[real_node_id] = val
+        source_indices = np.unique(
+            np.asarray(
+                [pair[1] + current_user_offset for pair in context_ind],
+                dtype=np.int64,
+            )
+        )
         predict_source_dt = time.perf_counter() - predict_t0
             
         #--- D. Solver Calculation ---
@@ -453,6 +462,8 @@ def run_experiment(run_id,args, save_dir):
                     h_dense,
                     args.alpha,
                     args.appr_eps,
+                    source_indices=source_indices,
+                    changed_nodes_hint=dynamic_changed_nodes_hint,
                 )
             else:
                 current_p, scratch_pushes, scratch_edge_visits, scratch_active = scratch_kernel(
@@ -463,6 +474,7 @@ def run_experiment(run_id,args, save_dir):
                     h_dense,
                     args.alpha,
                     args.appr_eps,
+                    source_indices,
                 )
                 timing_breakdown['scratch_solves'] += 1
                 timing_breakdown['scratch_pushes'] += int(scratch_pushes)
@@ -484,6 +496,7 @@ def run_experiment(run_id,args, save_dir):
                         h_dense,
                         args.alpha,
                         args.appr_eps,
+                        source_indices,
                     )
                 )
                 l1_error = float(
@@ -540,8 +553,11 @@ def run_experiment(run_id,args, save_dir):
         
         # --- F. Graph Update ---
         graph_update_t0 = time.perf_counter()
+        next_dynamic_changed_nodes_hint = np.empty(0, dtype=np.int64)
         if reward == 1.0 and connected_u is not None:
             timing_breakdown['graph_update_attempts'] += 1
+            previous_nnz = int(P_current_csr.nnz)
+            previous_degree = degree if args.method == 'dyn_locPRB' else None
             if args.graph_name in ['MovieLens', 'Amazon_fashion']:
                 raw_item_id = connected_v - current_user_offset
                 graph_manager.update(raw_item_id, connected_u)
@@ -550,6 +566,20 @@ def run_experiment(run_id,args, save_dir):
             P_current_csr = graph_manager.P.tocsr()  
             degree = np.array(graph_manager.degree).flatten().astype(np.int64)
             degree[degree == 0] = 1  
+            if args.method == 'dyn_locPRB':
+                endpoints = np.asarray(
+                    [int(connected_u), int(connected_v)], dtype=np.int64
+                )
+                if (
+                    int(P_current_csr.nnz) - previous_nnz == 2
+                    and np.all(
+                        degree[endpoints] - previous_degree[endpoints] == 1
+                    )
+                ):
+                    next_dynamic_changed_nodes_hint = endpoints
+                elif int(P_current_csr.nnz) != previous_nnz:
+                    next_dynamic_changed_nodes_hint = None
+        dynamic_changed_nodes_hint = next_dynamic_changed_nodes_hint
         graph_update_dt = time.perf_counter() - graph_update_t0
         # --- G. Net Update & Train ---
         ee_net.update(context, reward, t)

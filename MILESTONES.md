@@ -160,7 +160,19 @@ source delta、历史 residual、数组分配、push/edge visits 和自适应 sc
 - 记录 LocPRB/DYN 的 PPR 误差、决策分歧和 regret 变化。
 - 七数据集短实验显示目标排序，或明确列出仍未满足的数据集与原因。
 
-状态：未开始。
+阶段性结果（仅实现优化，尚未改变求解策略）：
+
+- scratch 与 DYN 均使用稀疏 source seed，避免每轮扫描完整 source/残差向量。
+- DYN 使用已知插边端点验证 degree 变化，只更新端点 degree，并移除每轮完整
+  `degree.astype(float64)` 与返回向量复制。
+- Python/Numba 合同测试继续通过（Numba 环境 9/9；无 Numba 环境 5 通过、4 跳过）。
+- `T=20`、seed 0、单进程下，七数据集 Loc/DYN regret 均完全一致；相较优化前，
+  DYN PPR 时间均下降。当前 MovieLens 与 Vessel 已达到 DYN < Loc，其余五个仍未达到。
+- 该结果说明实现开销已显著降低，但低 source overlap 导致的额外 push 仍是主要瓶颈；
+  下一步进入可明确汇报的自适应 scratch reset。此项会改变 DYN 的求解策略，必须单独
+  记录并验证输出、regret 与触发次数。
+
+状态：进行中（完成纯实现优化检查点，准备自适应策略）。
 
 ## Milestone 4：`T=1000` 验证
 
@@ -186,5 +198,5 @@ source delta、历史 residual、数组分配、push/edge visits 和自适应 sc
 | 0 PRB 参照 | 完成 | 待本次提交 | `benchmarks/prb_option_a_reference.json` | 采用方案 A；PPA 标记为 partial |
 | 1 统一口径 | 完成 | `e5ff896` | 7 tests + MovieLens T=1 四路 smoke | 显式后端、预热、结构化计时已完成 |
 | 2 短诊断 | 完成 | `62cd631` | `benchmarks/BACKEND_DIAGNOSIS_T20_T100.md` | 已定位 source delta 导致的额外 push |
-| 3 Numba 优化 | 未开始 | 待定 | 待定 | 待定 |
+| 3 Numba 优化 | 进行中 | 待本次提交 | T=20 七数据集 + 9 tests | 纯实现优化后 2/7 达到 DYN < Loc |
 | 4 T=1000 | 未开始 | 待定 | 待定 | 待定 |

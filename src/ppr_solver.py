@@ -30,33 +30,45 @@ def power_iteration(P: sp.spmatrix, alpha: float, h: np.ndarray, t: int) -> np.n
     return v
 
 @njit(cache=True)
-def _appr_diagnostics(num_nodes, indptr, indices, degree, h, alpha, eps):
+def _appr_diagnostics(
+    num_nodes, indptr, indices, degree, h, alpha, eps, seed_nodes=None
+):
     front = 0
     rear = 0
     queue = np.zeros(num_nodes + 1,dtype = np.int64)
     q_mark = np.zeros(num_nodes + 1, dtype = np.bool_)
     p = np.zeros(num_nodes)
     r = np.zeros(num_nodes)
-    eps_vec = eps * degree
     push_count = 0
     edge_visits = 0
     initial_active = 0
     
-    for idx in range(num_nodes):
-        val = h[idx]
-        r[idx] =  val 
-        if eps_vec[idx] <= np.abs(val):
-            queue[rear] = idx
-            rear = (rear + 1) % (num_nodes + 1)
-            q_mark[idx] = True
-            initial_active += 1
+    if seed_nodes is None:
+        for idx in range(num_nodes):
+            val = h[idx]
+            r[idx] = val
+            if eps * degree[idx] <= np.abs(val):
+                queue[rear] = idx
+                rear = (rear + 1) % (num_nodes + 1)
+                q_mark[idx] = True
+                initial_active += 1
+    else:
+        for seed_idx in range(len(seed_nodes)):
+            idx = seed_nodes[seed_idx]
+            val = h[idx]
+            r[idx] = val
+            if not q_mark[idx] and eps * degree[idx] <= np.abs(val):
+                queue[rear] = idx
+                rear = (rear + 1) % (num_nodes + 1)
+                q_mark[idx] = True
+                initial_active += 1
     
     while (rear - front) != 0: 
         u = queue[front]
         front = (front + 1) % (num_nodes + 1)
         q_mark[u] = False
         r_val = r[u]
-        if eps_vec[u] > np.abs(r[u]):
+        if eps * degree[u] > np.abs(r[u]):
             continue
         push_count += 1
         p[u] += r_val * (1. - alpha) 
@@ -65,7 +77,7 @@ def _appr_diagnostics(num_nodes, indptr, indices, degree, h, alpha, eps):
         for v in indices[indptr[u]:indptr[u + 1]]:
             edge_visits += 1
             r[v] += push_val
-            if not q_mark[v] and eps_vec[v] <= np.abs(r[v]):
+            if not q_mark[v] and eps * degree[v] <= np.abs(r[v]):
                 queue[rear] = v
                 rear = (rear + 1) % (num_nodes + 1)
                 q_mark[v] = True
@@ -89,28 +101,34 @@ def get_appr_kernel(backend="auto"):
 
 
 def appr_with_diagnostics(
-    num_nodes, indptr, indices, degree, h, alpha, eps, backend="auto"
+    num_nodes, indptr, indices, degree, h, alpha, eps, backend="auto",
+    seed_nodes=None,
 ):
     """Return scratch APPR and detailed online-work counters."""
     return get_appr_kernel(backend)(
-        num_nodes, indptr, indices, degree, h, alpha, eps
+        num_nodes, indptr, indices, degree, h, alpha, eps, seed_nodes
     )
 
 
 def appr_with_stats(
-    num_nodes, indptr, indices, degree, h, alpha, eps, backend="auto"
+    num_nodes, indptr, indices, degree, h, alpha, eps, backend="auto",
+    seed_nodes=None,
 ):
     """Return the scratch APPR vector and its local-push count."""
     p, pushes, _, _ = appr_with_diagnostics(
-        num_nodes, indptr, indices, degree, h, alpha, eps, backend=backend
+        num_nodes, indptr, indices, degree, h, alpha, eps,
+        backend=backend, seed_nodes=seed_nodes
     )
     return p, pushes
 
 
-def appr(num_nodes, indptr, indices, degree, h, alpha, eps, backend="auto"):
+def appr(
+    num_nodes, indptr, indices, degree, h, alpha, eps, backend="auto",
+    seed_nodes=None,
+):
     """Compatibility wrapper returning only the scratch APPR vector."""
     return get_appr_kernel(backend)(
-        num_nodes, indptr, indices, degree, h, alpha, eps
+        num_nodes, indptr, indices, degree, h, alpha, eps, seed_nodes
     )[0]
 
 
