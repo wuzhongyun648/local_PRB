@@ -1,19 +1,23 @@
 
+import os
+os.environ.setdefault("OMP_NUM_THREADS", "1")
+os.environ.setdefault("MKL_NUM_THREADS", "1")
+os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
+os.environ.setdefault("VECLIB_MAXIMUM_THREADS", "1")
+os.environ.setdefault("NUMEXPR_NUM_THREADS", "1")
+
 import argparse
 import numpy as np
+import scipy
 import scipy.sparse as sp
-import os
 import sys
 import time
 os.environ['TZ'] = 'Asia/Shanghai'
-os.environ["OMP_NUM_THREADS"] = "1"
-os.environ["MKL_NUM_THREADS"] = "1"
-os.environ["OPENBLAS_NUM_THREADS"] = "1"
-os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
-os.environ["NUMEXPR_NUM_THREADS"] = "1"
 import torch
 import datetime
 import multiprocessing as mp
+import platform
+import subprocess
 SRC_DIR = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT_FOR_IMPORTS = os.path.dirname(SRC_DIR)
 sys.path.append(REPO_ROOT_FOR_IMPORTS)
@@ -28,7 +32,7 @@ warnings.filterwarnings("ignore", message=".*SparseEfficiencyWarning.*")
 from src.EENet import EE_Net
 from src import ppr_solver
 from src import utils
-from src.dynamic_appr import DynamicAPPR
+from src.dynamic_appr import DynamicAPPR, get_push_impl
 from src.experiment_configs import (
     DEFAULT_EE_NET_POOL_STEP,
     DEFAULT_HIDDEN,
@@ -142,6 +146,12 @@ def parse_arguments():
     parser.add_argument('--n_neg', type=int, default=DEFAULT_N_NEG, help='Number of negative candidates per round (k = n_neg + 1)')
     parser.add_argument('--init_hops', type=int, default=0, help='H-hop warm-start radius for the initial graph; 0 keeps the default graph')
     parser.add_argument('--init_topk', type=int, default=0, help='Use top-k highest-degree seed nodes for warm-start; 0 disables warm-start')
+    parser.add_argument(
+        '--ppr_backend',
+        choices=('numba', 'python'),
+        default='numba',
+        help='Execution backend for LocPRB and dyn_locPRB; PRB always uses SciPy',
+    )
     
     parser.add_argument('--init_edges', type=int, default=None, help='Limit the number of initial edges for PPA/Vessel')
     parser.add_argument(
@@ -188,6 +198,7 @@ def run_experiment(run_id,args, save_dir):
     handling context observation, PPR computation (approximate or exact), 
     arm selection, dynamic graph updates, and neural network training.
     """
+    end_to_end_t0 = time.perf_counter()
     seed = args.seed + run_id
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -233,19 +244,60 @@ def run_experiment(run_id,args, save_dir):
     ee_net = build_ee_net(
         bandit_loader.dim, bandit_loader.n_arm, args, current_kernel_size
     )
+    resolved_backend = 'scipy' if args.method == 'PRB' else args.ppr_backend
+    scratch_kernel = (
+        ppr_solver.get_appr_kernel(args.ppr_backend)
+        if args.method in ('LocPRB', 'dyn_locPRB')
+        else None
+    )
+    push_impl = (
+        get_push_impl(args.ppr_backend)
+        if args.method == 'dyn_locPRB'
+        else None
+    )
     dynamic_solver = (
-        DynamicAPPR()
+        DynamicAPPR(push_impl=push_impl)
         if args.method == 'dyn_locPRB'
         else None
     )
     results_list = [] # [time, regret, loss1, loss2, ppr_norm]
-
-    start_time_trial = time.time()
-    sum_regret = 0.0
     if sp.isspmatrix_csr(graph_manager.P):
         P_current_csr = graph_manager.P
     else:
         P_current_csr = graph_manager.P.tocsr()
+
+    # Compile Numba against the real graph dtypes before any reported timer.
+    warmup_seconds = 0.0
+    if resolved_backend == 'numba':
+        warmup_t0 = time.perf_counter()
+        warm_degree = np.asarray(graph_manager.degree).reshape(-1).astype(np.int64)
+        warm_degree[warm_degree == 0] = 1
+        warm_source = np.zeros(num_nodes, dtype=np.float64)
+        if args.method == 'LocPRB':
+            scratch_kernel(
+                num_nodes,
+                P_current_csr.indptr,
+                P_current_csr.indices,
+                warm_degree,
+                warm_source,
+                args.alpha,
+                args.appr_eps,
+            )
+        elif args.method == 'dyn_locPRB':
+            push_impl(
+                P_current_csr.indptr,
+                P_current_csr.indices,
+                warm_degree.astype(np.float64),
+                np.zeros(num_nodes, dtype=np.float64),
+                warm_source.copy(),
+                args.alpha,
+                args.appr_eps,
+            )
+        warmup_seconds = time.perf_counter() - warmup_t0
+
+    setup_seconds = time.perf_counter() - end_to_end_t0 - warmup_seconds
+    start_time_trial = time.perf_counter()
+    sum_regret = 0.0
         
         
     print(f">>> [Worker {run_id}] Generating fixed testing dataset (100 samples)...", flush=True)
@@ -257,6 +309,17 @@ def run_experiment(run_id,args, save_dir):
         'ppr_time': 0.0,
         'train_time': 0.0,
         'other_time': 0.0,
+        'loader_time': 0.0,
+        'predict_source_time': 0.0,
+        'decision_time': 0.0,
+        'graph_update_time': 0.0,
+        'evaluation_time': 0.0,
+        'testset_build_time': 0.0,
+        'scratch_solves': 0,
+        'scratch_pushes': 0,
+        'scratch_edge_visits': 0,
+        'scratch_initial_active_nodes': 0,
+        'graph_update_attempts': 0,
         'diagnostic_time': 0.0,
         'diagnostic_checks': 0,
         'diagnostic_l1_sum': 0.0,
@@ -264,15 +327,17 @@ def run_experiment(run_id,args, save_dir):
         'diagnostic_decision_disagreements': 0,
         'diagnostic_scratch_pushes': 0,
     }
-    _t_build0 = time.time()
+    _t_build0 = time.perf_counter()
     fixed_test_set = bandit_loader.testing_dataset()
-    total_excluded_seconds += time.time() - _t_build0
+    testset_build_dt = time.perf_counter() - _t_build0
+    timing_breakdown['testset_build_time'] = testset_build_dt
+    total_excluded_seconds += testset_build_dt
 
     for t in range(args.T):
-        step_start = time.time()
+        step_start = time.perf_counter()
         eval_dt = 0.0
         if t % 50 == 0:
-            eval_t0 = time.time()
+            eval_t0 = time.perf_counter()
             test_hits = 0
             test_user_offset = 0
             if args.graph_name in ['MovieLens', 'Amazon_fashion']:
@@ -297,10 +362,10 @@ def run_experiment(run_id,args, save_dir):
                 if args.method in ('LocPRB', 'dyn_locPRB'):
                     t_degree = np.array(graph_manager.degree).flatten().astype(np.int64)
                     t_degree[t_degree == 0] = 1
-                    t_p = ppr_solver.appr(
+                    t_p = scratch_kernel(
                         num_nodes, P_current_csr.indptr, P_current_csr.indices, 
                         t_degree, t_h_dense, args.alpha, args.appr_eps
-                    )
+                    )[0]
                 elif args.method == 'PRB':
                     t_p = ppr_solver.power_iteration(
                         P_current_csr, args.alpha, t_h_dense, args.power_T
@@ -314,16 +379,19 @@ def run_experiment(run_id,args, save_dir):
                     test_hits += 1
             
             test_acc = test_hits / 100.0
-            eval_dt = time.time() - eval_t0
+            eval_dt = time.perf_counter() - eval_t0
+            timing_breakdown['evaluation_time'] += eval_dt
             total_excluded_seconds += eval_dt
             # 不含测试集构造与评测的累计墙钟时间（本轮评测结束后）
-            current_eval_time = time.time() - start_time_trial - total_excluded_seconds
+            current_eval_time = time.perf_counter() - start_time_trial - total_excluded_seconds
             time_acc_results.append([current_eval_time, test_acc])
             latest_test_acc = test_acc
         # --- A. Bandit Step (Context) ---
         online_step_t0 = time.perf_counter()
         
+        loader_t0 = time.perf_counter()
         step_result = loader_step()
+        loader_dt = time.perf_counter() - loader_t0
         if len(step_result) == 6:
             context, context_ind, rwd, _, user_id, _ = step_result
         else:
@@ -331,6 +399,7 @@ def run_experiment(run_id,args, save_dir):
             context, context_ind, rwd, _, user_id, _ = step_result
             
         # --- B. Neural Net Predict ---
+        predict_t0 = time.perf_counter()
         _, h_observe = ee_net.predict(context, t)
         
         # --- C. Construct h Vector ---
@@ -350,6 +419,7 @@ def run_experiment(run_id,args, save_dir):
             if isinstance(val, (list, np.ndarray)): val = val[0]
             
             h_dense[real_node_id] = val
+        predict_source_dt = time.perf_counter() - predict_t0
             
         #--- D. Solver Calculation ---
 
@@ -373,7 +443,7 @@ def run_experiment(run_id,args, save_dir):
                     args.appr_eps,
                 )
             else:
-                current_p = ppr_solver.appr(
+                current_p, scratch_pushes, scratch_edge_visits, scratch_active = scratch_kernel(
                     num_nodes,
                     P_current_csr.indptr,
                     P_current_csr.indices,
@@ -382,6 +452,10 @@ def run_experiment(run_id,args, save_dir):
                     args.alpha,
                     args.appr_eps,
                 )
+                timing_breakdown['scratch_solves'] += 1
+                timing_breakdown['scratch_pushes'] += int(scratch_pushes)
+                timing_breakdown['scratch_edge_visits'] += int(scratch_edge_visits)
+                timing_breakdown['scratch_initial_active_nodes'] += int(scratch_active)
             ppr_dt = time.perf_counter() - ppr_t0
             if (
                 args.method == 'dyn_locPRB'
@@ -389,8 +463,8 @@ def run_experiment(run_id,args, save_dir):
                 and t % args.ppr_diagnostic_every == 0
             ):
                 diagnostic_t0 = time.perf_counter()
-                scratch_diagnostic_p, scratch_pushes = (
-                    ppr_solver.appr_with_stats(
+                scratch_diagnostic_p, scratch_pushes, _, _ = (
+                    scratch_kernel(
                         num_nodes,
                         P_current_csr.indptr,
                         P_current_csr.indices,
@@ -411,6 +485,15 @@ def run_experiment(run_id,args, save_dir):
                 timing_breakdown['diagnostic_scratch_pushes'] += int(
                     scratch_pushes
                 )
+                diagnostic_candidate_ids = [
+                    pair[1] + current_user_offset for pair in context_ind
+                ]
+                timing_breakdown['diagnostic_decision_disagreements'] += int(
+                    np.argmax(current_p[diagnostic_candidate_ids])
+                    != np.argmax(scratch_diagnostic_p[diagnostic_candidate_ids])
+                )
+                diagnostic_dt = time.perf_counter() - diagnostic_t0
+                total_excluded_seconds += diagnostic_dt
             
         elif args.method == 'PRB':
             ppr_t0 = time.perf_counter()
@@ -424,19 +507,12 @@ def run_experiment(run_id,args, save_dir):
         
         
         # --- E. Decision & Reward ---
-        
+        decision_t0 = time.perf_counter()
         cand_graph_ids = []
         for pair in context_ind:
             cand_graph_ids.append(pair[1] + current_user_offset)
             
         p_scores = current_p[cand_graph_ids]
-        if scratch_diagnostic_p is not None:
-            scratch_scores = scratch_diagnostic_p[cand_graph_ids]
-            timing_breakdown['diagnostic_decision_disagreements'] += int(
-                np.argmax(p_scores) != np.argmax(scratch_scores)
-            )
-            diagnostic_dt = time.perf_counter() - diagnostic_t0
-            total_excluded_seconds += diagnostic_dt
         
         final_arm = int(np.argmax(p_scores))
         
@@ -448,9 +524,12 @@ def run_experiment(run_id,args, save_dir):
             reward = 0.0
             connected_u = None
         sum_regret += (1.0 - reward)
+        decision_dt = time.perf_counter() - decision_t0
         
         # --- F. Graph Update ---
+        graph_update_t0 = time.perf_counter()
         if reward == 1.0 and connected_u is not None:
+            timing_breakdown['graph_update_attempts'] += 1
             if args.graph_name in ['MovieLens', 'Amazon_fashion']:
                 raw_item_id = connected_v - current_user_offset
                 graph_manager.update(raw_item_id, connected_u)
@@ -459,6 +538,7 @@ def run_experiment(run_id,args, save_dir):
             P_current_csr = graph_manager.P.tocsr()  
             degree = np.array(graph_manager.degree).flatten().astype(np.int64)
             degree[degree == 0] = 1  
+        graph_update_dt = time.perf_counter() - graph_update_t0
         # --- G. Net Update & Train ---
         ee_net.update(context, reward, t)
         
@@ -476,7 +556,7 @@ def run_experiment(run_id,args, save_dir):
                 train_dt = time.perf_counter() - train_t0
             
         # --- H. Recording ---
-        step_end = time.time()
+        step_end = time.perf_counter()
         step_duration = step_end - step_start - eval_dt - diagnostic_dt
         ppr_norm = np.sum(np.abs(current_p))
         current_total_time_excl_overhead = step_end - start_time_trial - total_excluded_seconds
@@ -487,17 +567,33 @@ def run_experiment(run_id,args, save_dir):
             print(f"Round {t} | Regret: {sum_regret:.0f} | Loss1: {loss1:.4f} | Loss2: {loss2:.4f} | TestAcc: {latest_test_acc:.2%} | Time: {current_total_time_excl_overhead:.4f}s (excl. testset&eval) | Norm: {ppr_norm:.2f}", flush=True)
         
         if args.if_save and t % 1000 == 0 and t > 0:
-            
-            utils.save_results(save_dir, results_list, is_final=False)
+            np.save(
+                os.path.join(
+                    save_dir,
+                    f"worker_{run_id}_checkpoint_step_{len(results_list)}.npy",
+                ),
+                np.asarray(results_list),
+            )
 
         online_step_elapsed = time.perf_counter() - online_step_t0
         other_dt = max(
             0.0,
-            online_step_elapsed - ppr_dt - train_dt - diagnostic_dt,
+            online_step_elapsed
+            - ppr_dt
+            - train_dt
+            - diagnostic_dt
+            - graph_update_dt
+            - loader_dt
+            - predict_source_dt
+            - decision_dt,
         )
         timing_breakdown['ppr_time'] += ppr_dt
         timing_breakdown['train_time'] += train_dt
         timing_breakdown['other_time'] += other_dt
+        timing_breakdown['loader_time'] += loader_dt
+        timing_breakdown['predict_source_time'] += predict_source_dt
+        timing_breakdown['decision_time'] += decision_dt
+        timing_breakdown['graph_update_time'] += graph_update_dt
         timing_breakdown['diagnostic_time'] += diagnostic_dt
 
     if dynamic_solver is not None:
@@ -505,7 +601,12 @@ def run_experiment(run_id,args, save_dir):
             timing_breakdown[f'dynamic_{key}'] = value
 
     # --- Final Save ---
-    total_time = time.time() - start_time_trial - total_excluded_seconds
+    total_time = time.perf_counter() - start_time_trial - total_excluded_seconds
+    end_to_end_seconds = time.perf_counter() - end_to_end_t0
+    timing_breakdown['online_total_time'] = total_time
+    timing_breakdown['setup_time'] = setup_seconds
+    timing_breakdown['warmup_time'] = warmup_seconds
+    timing_breakdown['end_to_end_time'] = end_to_end_seconds
     
     print(
         f">>> [Worker {run_id}] Finished. Total Time: {total_time:.2f}s "
@@ -515,20 +616,89 @@ def run_experiment(run_id,args, save_dir):
     time_acc_save_path = os.path.join(save_dir, f"worker_{run_id}_TimeAcc.npy")
     np.save(time_acc_save_path, np.array(time_acc_results))
     print(f"-> Saved Time-Accuracy results to {time_acc_save_path}")
+    try:
+        git_commit = subprocess.check_output(
+            ['git', 'rev-parse', 'HEAD'],
+            cwd=REPO_ROOT_FOR_IMPORTS,
+            text=True,
+        ).strip()
+    except Exception:
+        git_commit = 'unknown'
+    try:
+        git_dirty = bool(
+            subprocess.check_output(
+                ['git', 'status', '--porcelain'],
+                cwd=REPO_ROOT_FOR_IMPORTS,
+                text=True,
+            ).strip()
+        )
+    except Exception:
+        git_dirty = None
+    try:
+        import numba
+        numba_version = numba.__version__
+    except ModuleNotFoundError:
+        numba_version = None
+    cuda_available = torch.cuda.is_available()
+    gpu_name = torch.cuda.get_device_name(0) if cuda_available else None
+    run_metrics = {
+        'schema_version': 1,
+        'run_id': run_id,
+        'seed': seed,
+        'dataset': args.graph_name,
+        'method': args.method,
+        'requested_backend': args.ppr_backend,
+        'resolved_backend': resolved_backend,
+        'rounds': args.T,
+        'final_regret': sum_regret,
+        'timing': timing_breakdown,
+        'environment': {
+            'git_commit': git_commit,
+            'git_dirty': git_dirty,
+            'python': platform.python_version(),
+            'numpy': np.__version__,
+            'scipy': scipy.__version__,
+            'numba': numba_version,
+            'torch': torch.__version__,
+            'platform': platform.platform(),
+            'processor': platform.processor(),
+            'cpu_count': os.cpu_count(),
+            'cpu_affinity': sorted(os.sched_getaffinity(0)) if hasattr(os, 'sched_getaffinity') else None,
+            'cuda_visible_devices': os.environ.get('CUDA_VISIBLE_DEVICES'),
+            'cuda_available': cuda_available,
+            'gpu_name': gpu_name,
+            'thread_environment': {
+                name: os.environ.get(name) for name in (
+                    'OMP_NUM_THREADS', 'MKL_NUM_THREADS', 'OPENBLAS_NUM_THREADS',
+                    'VECLIB_MAXIMUM_THREADS', 'NUMEXPR_NUM_THREADS'
+                )
+            },
+        },
+        'config': vars(args),
+    }
+    utils.save_json(
+        os.path.join(save_dir, f'worker_{run_id}_metrics.json'),
+        run_metrics,
+    )
     return np.array(results_list), timing_breakdown
 
 def main():
     mp.set_start_method('spawn', force=True)
     args = parse_arguments()
-    current_time = datetime.datetime.now().strftime("%Y%m%d%H%M")
+    current_time = datetime.datetime.now().strftime("%Y%m%d%H%M%S%f")
     if args.method in ('LocPRB', 'dyn_locPRB'):
         param_str = f"eps{args.appr_eps}"
     else:
         param_str = f"powT{args.power_T}"
     ks_resolved = utils.resolve_ee_net_kernel_size(args.graph_name, args.kernel_size)
     method_label = f"{args.method}{METHOD_LABEL_SUFFIX}"
+    backend_label = (
+        f"_backend{args.ppr_backend}"
+        if args.method in ('LocPRB', 'dyn_locPRB')
+        else ''
+    )
     folder_name = (
-        f"{args.graph_name}_{method_label}_alpha{args.alpha}_{param_str}_"
+        f"{args.graph_name}_{method_label}{backend_label}_alpha{args.alpha}_{param_str}_"
         f"T{args.T}_k{args.n_neg + 1}_initH{args.init_hops}_initK{args.init_topk}_"
         f"lr1{args.lr1}_lr2{args.lr2}_h{args.hidden}_ks{ks_resolved}_{current_time}"
     )
@@ -536,8 +706,7 @@ def main():
     
     base_dir = os.path.join(RESULTS_DIR, "online_link_prediction")
     save_dir = os.path.join(base_dir, folder_name)
-    if not os.path.exists(save_dir):
-        os.makedirs(save_dir)
+    os.makedirs(save_dir, exist_ok=False)
     
     print(f"=== Experiment Start ===")
     print(f"Output Dir: {save_dir}")
@@ -608,6 +777,33 @@ def main():
             f"Insert Updates: {insert_updates} | "
             f"Fallback Resets: {fallback_resets} ==="
         )
+    aggregate_metrics = {
+        'schema_version': 1,
+        'dataset': args.graph_name,
+        'method': args.method,
+        'requested_backend': args.ppr_backend,
+        'resolved_backend': 'scipy' if args.method == 'PRB' else args.ppr_backend,
+        'runs': args.runs,
+        'rounds': args.T,
+        'final_regret_mean': float(np.mean(final_data[:, -1, 1])),
+        'final_regret_std': float(np.std(final_data[:, -1, 1])),
+        'timing_totals': {
+            key: sum(stats.get(key, 0) for _, stats in valid_results)
+            for key in (
+                'ppr_time', 'train_time', 'graph_update_time', 'other_time',
+                'loader_time', 'predict_source_time', 'decision_time',
+                'evaluation_time', 'testset_build_time', 'diagnostic_time',
+                'online_total_time', 'setup_time', 'warmup_time', 'end_to_end_time'
+            )
+        },
+        'solver_totals': {
+            key: sum(stats.get(key, 0) for _, stats in valid_results)
+            for key in set().union(*(stats.keys() for _, stats in valid_results))
+            if key.startswith('scratch_') or key.startswith('dynamic_')
+        },
+        'config': vars(args),
+    }
+    utils.save_json(os.path.join(save_dir, 'metrics_summary.json'), aggregate_metrics)
     utils.save_results(save_dir, final_data, is_final=True, args=args)
 
 

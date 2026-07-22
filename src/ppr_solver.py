@@ -30,7 +30,7 @@ def power_iteration(P: sp.spmatrix, alpha: float, h: np.ndarray, t: int) -> np.n
     return v
 
 @njit(cache=True)
-def _appr_with_stats(num_nodes, indptr, indices, degree, h, alpha, eps):
+def _appr_diagnostics(num_nodes, indptr, indices, degree, h, alpha, eps):
     front = 0
     rear = 0
     queue = np.zeros(num_nodes + 1,dtype = np.int64)
@@ -39,6 +39,8 @@ def _appr_with_stats(num_nodes, indptr, indices, degree, h, alpha, eps):
     r = np.zeros(num_nodes)
     eps_vec = eps * degree
     push_count = 0
+    edge_visits = 0
+    initial_active = 0
     
     for idx in range(num_nodes):
         val = h[idx]
@@ -47,6 +49,7 @@ def _appr_with_stats(num_nodes, indptr, indices, degree, h, alpha, eps):
             queue[rear] = idx
             rear = (rear + 1) % (num_nodes + 1)
             q_mark[idx] = True
+            initial_active += 1
     
     while (rear - front) != 0: 
         u = queue[front]
@@ -60,25 +63,53 @@ def _appr_with_stats(num_nodes, indptr, indices, degree, h, alpha, eps):
         r[u] = 0.0
         push_val = alpha * r_val / degree[u]
         for v in indices[indptr[u]:indptr[u + 1]]:
+            edge_visits += 1
             r[v] += push_val
             if not q_mark[v] and eps_vec[v] <= np.abs(r[v]):
                 queue[rear] = v
                 rear = (rear + 1) % (num_nodes + 1)
                 q_mark[v] = True
         
-    return p, push_count
+    return p, push_count, edge_visits, initial_active
 
 
-def appr_with_stats(num_nodes, indptr, indices, degree, h, alpha, eps):
-    """Return the scratch APPR vector and its local-push count."""
-    return _appr_with_stats(
+def get_appr_kernel(backend="auto"):
+    """Resolve the scratch APPR kernel without duplicating its algorithm."""
+    if backend == "auto":
+        backend = "numba" if NUMBA_AVAILABLE else "python"
+    if backend == "numba":
+        if not NUMBA_AVAILABLE:
+            raise RuntimeError(
+                "The numba PPR backend was requested, but numba is unavailable"
+            )
+        return _appr_diagnostics
+    if backend == "python":
+        return getattr(_appr_diagnostics, "py_func", _appr_diagnostics)
+    raise ValueError(f"Unknown PPR backend: {backend!r}")
+
+
+def appr_with_diagnostics(
+    num_nodes, indptr, indices, degree, h, alpha, eps, backend="auto"
+):
+    """Return scratch APPR and detailed online-work counters."""
+    return get_appr_kernel(backend)(
         num_nodes, indptr, indices, degree, h, alpha, eps
     )
 
 
-def appr(num_nodes, indptr, indices, degree, h, alpha, eps):
+def appr_with_stats(
+    num_nodes, indptr, indices, degree, h, alpha, eps, backend="auto"
+):
+    """Return the scratch APPR vector and its local-push count."""
+    p, pushes, _, _ = appr_with_diagnostics(
+        num_nodes, indptr, indices, degree, h, alpha, eps, backend=backend
+    )
+    return p, pushes
+
+
+def appr(num_nodes, indptr, indices, degree, h, alpha, eps, backend="auto"):
     """Compatibility wrapper returning only the scratch APPR vector."""
-    return _appr_with_stats(
+    return get_appr_kernel(backend)(
         num_nodes, indptr, indices, degree, h, alpha, eps
     )[0]
 

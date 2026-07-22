@@ -3,6 +3,7 @@ import scipy.sparse as sp
 import torch
 from ogb.linkproppred import LinkPropPredDataset
 import os
+import json
 from src.experiment_configs import DATA_DIR
 
 _original_torch_load = torch.load
@@ -10,6 +11,25 @@ def _safe_torch_load(*args, **kwargs):
     kwargs["weights_only"] = False
     return _original_torch_load(*args, **kwargs)
 torch.load = _safe_torch_load
+
+
+def _json_ready(value):
+    if isinstance(value, dict):
+        return {str(key): _json_ready(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_ready(item) for item in value]
+    if isinstance(value, np.ndarray):
+        return value.tolist()
+    if isinstance(value, np.generic):
+        return value.item()
+    return value
+
+
+def save_json(path, payload):
+    """Persist structured experiment metadata in a deterministic format."""
+    with open(path, "w", encoding="utf-8") as handle:
+        json.dump(_json_ready(payload), handle, indent=2, sort_keys=True)
+        handle.write("\n")
 
 
 def resolve_ee_net_kernel_size(graph_name, kernel_size_arg):

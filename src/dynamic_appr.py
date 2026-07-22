@@ -69,6 +69,21 @@ def appr_push(indptr, indices, degree, p, residual, alpha, eps):
     return push_count, edge_visits, initial_active
 
 
+def get_push_impl(backend="auto"):
+    """Resolve the DYN push kernel without maintaining two implementations."""
+    if backend == "auto":
+        backend = "numba" if NUMBA_AVAILABLE else "python"
+    if backend == "numba":
+        if not NUMBA_AVAILABLE:
+            raise RuntimeError(
+                "The numba PPR backend was requested, but numba is unavailable"
+            )
+        return appr_push
+    if backend == "python":
+        return getattr(appr_push, "py_func", appr_push)
+    raise ValueError(f"Unknown PPR backend: {backend!r}")
+
+
 class DynamicAPPR:
     """Maintain APPR state across source changes and edge insertions.
 
@@ -91,6 +106,7 @@ class DynamicAPPR:
             "source_updates": 0,
             "pushes": 0,
             "edge_visits": 0,
+            "initial_active_nodes": 0,
         }
         self.last_stats = {}
         self.reset()
@@ -211,4 +227,5 @@ class DynamicAPPR:
         self.stats["source_updates"] += source_changed
         self.stats["pushes"] += int(push_count)
         self.stats["edge_visits"] += int(edge_visits)
+        self.stats["initial_active_nodes"] += int(initial_active)
         return self.p.copy()

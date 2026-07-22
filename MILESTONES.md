@@ -95,7 +95,26 @@ PRB regret 与时间参照，避免反复运行 PRB。
 - Numba warm-up 明确排除在计时之外。
 - 增加并通过必要的单元/合同测试。
 
-状态：未开始。
+实现结果：
+
+- 正式入口增加显式 `--ppr_backend {numba,python}`；PRB 固定为 SciPy。
+- Python/Numba 通过同一 Numba dispatcher 及其 `.py_func` 选择，不复制算法。
+- Numba 使用真实 CSR/degree dtype 在正式计时前逐 worker 预热。
+- 保留旧 `final_results.npy` 五列，新增 `worker_*_metrics.json` 和
+  `metrics_summary.json`。
+- 新增 PPR、训练、图更新、loader、predict/source、decision、other、evaluation、
+  setup、warmup 和 worker wall time，以及 scratch/DYN 工作量统计。
+- 结果目录使用微秒级唯一时间戳；checkpoint 使用 worker-specific 文件名。
+- 记录 Git dirty 状态、Python/NumPy/SciPy/Numba/Torch、CPU affinity 和 GPU 信息。
+
+验证：
+
+- `.venv-dyn-diagnosis/bin/python -m unittest discover -s tests -v`：7/7 通过。
+- 无 Numba 的默认 Python 环境：3 个通用测试通过，4 个 Numba 合同测试按预期跳过。
+- MovieLens `T=1` 的 Python/Numba Loc/DYN 四路真实入口 smoke test 均完成；同算法
+  backend 的 regret、loss 和 PPR norm 完全一致，新旧结果与 JSON 均成功保存。
+
+状态：完成，等待本次提交记录 commit。
 
 ## Milestone 2：七数据集短诊断
 
@@ -155,7 +174,7 @@ source delta、历史 residual、数组分配、push/edge visits 和自适应 sc
 | Milestone | 状态 | Commit | 验证/结果 | 结论 |
 |---|---|---|---|---|
 | 0 PRB 参照 | 完成 | 待本次提交 | `benchmarks/prb_option_a_reference.json` | 采用方案 A；PPA 标记为 partial |
-| 1 统一口径 | 未开始 | 待定 | 待定 | 待定 |
+| 1 统一口径 | 完成 | 待本次提交 | 7 tests + MovieLens T=1 四路 smoke | 显式后端、预热、结构化计时已完成 |
 | 2 短诊断 | 未开始 | 待定 | 待定 | 待定 |
 | 3 Numba 优化 | 未开始 | 待定 | 待定 | 待定 |
 | 4 T=1000 | 未开始 | 待定 | 待定 | 待定 |
