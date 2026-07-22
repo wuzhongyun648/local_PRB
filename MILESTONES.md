@@ -215,5 +215,5 @@ source delta、历史 residual、数组分配、push/edge visits 和自适应 sc
 | 0 PRB 参照 | 完成 | 待本次提交 | `benchmarks/prb_option_a_reference.json` | 采用方案 A；PPA 标记为 partial |
 | 1 统一口径 | 完成 | `e5ff896` | 7 tests + MovieLens T=1 四路 smoke | 显式后端、预热、结构化计时已完成 |
 | 2 短诊断 | 完成 | `62cd631` | `benchmarks/BACKEND_DIAGNOSIS_T20_T100.md` | 已定位 source delta 导致的额外 push |
-| 3 Numba 优化 | 完成 | 待本次提交 | 10 tests + 自适应/锁定快路径 | 明确改变求解策略，最终七数据集过线 |
-| 4 T=1000 | 完成 | 待本次提交 | `benchmarks/T1000_FINAL_NUMBA_VALIDATION.md` | 选定 Numba 三版本；PRB 为 Option A interim |
+| 3 Numba 优化 | 完成 | `ff3291c` | 11 tests + 自适应/锁定快路径 | 明确改变求解策略，最终七数据集过线 |
+| 4 T=1000 | 完成 | `ff3291c` | `benchmarks/T1000_FINAL_NUMBA_VALIDATION.md` | 选定 Numba 三版本；PRB 为 Option A interim |
