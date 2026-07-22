@@ -130,7 +130,17 @@ PRB regret 与时间参照，避免反复运行 PRB。
 - 分别解释 Numba-DYN vs Numba-LocPRB、Numba-LocPRB vs PRB 的瓶颈。
 - 运行期间无明显 CPU/GPU 资源争用。
 
-状态：未开始。
+结果：
+
+- 完成七数据集、四个 Loc/DYN backend 的 `T=20` 串行矩阵，全部任务成功。
+- 完成七数据集 Numba Loc/DYN 的 `T=100` timing run 和逐轮 scratch 对照。
+- Python/Numba 同算法 regret 一致；T=20 Loc/DYN regret 在七数据集全部一致。
+- T=100 时 Numba-DYN 仅 Vessel 快于 Numba-Loc；其余数据集慢 1.74x-1.98x。
+- DYN push/edge 工作量普遍是 scratch 的 1.2x-1.94x；相邻 source 低重叠是主因。
+- PPA 有 44/100 次候选决策分歧，regret 为 Loc 95、DYN 86，需要在优化中重点守护。
+- 完整报告见 `benchmarks/BACKEND_DIAGNOSIS_T20_T100.md`。
+
+状态：完成，等待本次提交记录 commit。
 
 ## Milestone 3：优先优化 Numba 路线
 
@@ -175,6 +185,6 @@ source delta、历史 residual、数组分配、push/edge visits 和自适应 sc
 |---|---|---|---|---|
 | 0 PRB 参照 | 完成 | 待本次提交 | `benchmarks/prb_option_a_reference.json` | 采用方案 A；PPA 标记为 partial |
 | 1 统一口径 | 完成 | `e5ff896` | 7 tests + MovieLens T=1 四路 smoke | 显式后端、预热、结构化计时已完成 |
-| 2 短诊断 | 未开始 | 待定 | 待定 | 待定 |
+| 2 短诊断 | 完成 | 待本次提交 | `benchmarks/BACKEND_DIAGNOSIS_T20_T100.md` | 已定位 source delta 导致的额外 push |
 | 3 Numba 优化 | 未开始 | 待定 | 待定 | 待定 |
 | 4 T=1000 | 未开始 | 待定 | 待定 | 待定 |
