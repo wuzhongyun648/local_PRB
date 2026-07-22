@@ -144,6 +144,17 @@ def parse_arguments():
     parser.add_argument('--init_topk', type=int, default=0, help='Use top-k highest-degree seed nodes for warm-start; 0 disables warm-start')
     
     parser.add_argument('--init_edges', type=int, default=None, help='Limit the number of initial edges for PPA/Vessel')
+    parser.add_argument(
+        '--ppr_diagnostics',
+        action='store_true',
+        help='Compare DYN-APPR with scratch APPR periodically (diagnostic runs only)',
+    )
+    parser.add_argument(
+        '--ppr_diagnostic_every',
+        type=int,
+        default=50,
+        help='Rounds between scratch-vs-DYN diagnostic checks',
+    )
     parser.add_argument('--hidden', type=int, default=DEFAULT_HIDDEN, help='EE-Net exploitation hidden width (Network_exploitation)')
     parser.add_argument(
         '--kernel_size',
@@ -162,6 +173,8 @@ def parse_arguments():
         parser.error("--init_hops must be >= 0")
     if args.init_topk < 0:
         parser.error("--init_topk must be >= 0")
+    if args.ppr_diagnostic_every < 1:
+        parser.error("--ppr_diagnostic_every must be >= 1")
         
     return args
 
@@ -220,7 +233,11 @@ def run_experiment(run_id,args, save_dir):
     ee_net = build_ee_net(
         bandit_loader.dim, bandit_loader.n_arm, args, current_kernel_size
     )
-    dynamic_solver = DynamicAPPR() if args.method == 'dyn_locPRB' else None
+    dynamic_solver = (
+        DynamicAPPR()
+        if args.method == 'dyn_locPRB'
+        else None
+    )
     results_list = [] # [time, regret, loss1, loss2, ppr_norm]
 
     start_time_trial = time.time()
@@ -240,6 +257,12 @@ def run_experiment(run_id,args, save_dir):
         'ppr_time': 0.0,
         'train_time': 0.0,
         'other_time': 0.0,
+        'diagnostic_time': 0.0,
+        'diagnostic_checks': 0,
+        'diagnostic_l1_sum': 0.0,
+        'diagnostic_l1_max': 0.0,
+        'diagnostic_decision_disagreements': 0,
+        'diagnostic_scratch_pushes': 0,
     }
     _t_build0 = time.time()
     fixed_test_set = bandit_loader.testing_dataset()
@@ -332,6 +355,8 @@ def run_experiment(run_id,args, save_dir):
 
         current_p = None
         ppr_dt = 0.0
+        diagnostic_dt = 0.0
+        scratch_diagnostic_p = None
         
         if args.method in ('LocPRB', 'dyn_locPRB'):
             ppr_t0 = time.perf_counter()
@@ -358,6 +383,34 @@ def run_experiment(run_id,args, save_dir):
                     args.appr_eps,
                 )
             ppr_dt = time.perf_counter() - ppr_t0
+            if (
+                args.method == 'dyn_locPRB'
+                and args.ppr_diagnostics
+                and t % args.ppr_diagnostic_every == 0
+            ):
+                diagnostic_t0 = time.perf_counter()
+                scratch_diagnostic_p, scratch_pushes = (
+                    ppr_solver.appr_with_stats(
+                        num_nodes,
+                        P_current_csr.indptr,
+                        P_current_csr.indices,
+                        degree,
+                        h_dense,
+                        args.alpha,
+                        args.appr_eps,
+                    )
+                )
+                l1_error = float(
+                    np.sum(np.abs(current_p - scratch_diagnostic_p))
+                )
+                timing_breakdown['diagnostic_checks'] += 1
+                timing_breakdown['diagnostic_l1_sum'] += l1_error
+                timing_breakdown['diagnostic_l1_max'] = max(
+                    timing_breakdown['diagnostic_l1_max'], l1_error
+                )
+                timing_breakdown['diagnostic_scratch_pushes'] += int(
+                    scratch_pushes
+                )
             
         elif args.method == 'PRB':
             ppr_t0 = time.perf_counter()
@@ -377,6 +430,13 @@ def run_experiment(run_id,args, save_dir):
             cand_graph_ids.append(pair[1] + current_user_offset)
             
         p_scores = current_p[cand_graph_ids]
+        if scratch_diagnostic_p is not None:
+            scratch_scores = scratch_diagnostic_p[cand_graph_ids]
+            timing_breakdown['diagnostic_decision_disagreements'] += int(
+                np.argmax(p_scores) != np.argmax(scratch_scores)
+            )
+            diagnostic_dt = time.perf_counter() - diagnostic_t0
+            total_excluded_seconds += diagnostic_dt
         
         final_arm = int(np.argmax(p_scores))
         
@@ -417,7 +477,7 @@ def run_experiment(run_id,args, save_dir):
             
         # --- H. Recording ---
         step_end = time.time()
-        step_duration = step_end - step_start - eval_dt
+        step_duration = step_end - step_start - eval_dt - diagnostic_dt
         ppr_norm = np.sum(np.abs(current_p))
         current_total_time_excl_overhead = step_end - start_time_trial - total_excluded_seconds
         
@@ -431,10 +491,18 @@ def run_experiment(run_id,args, save_dir):
             utils.save_results(save_dir, results_list, is_final=False)
 
         online_step_elapsed = time.perf_counter() - online_step_t0
-        other_dt = max(0.0, online_step_elapsed - ppr_dt - train_dt)
+        other_dt = max(
+            0.0,
+            online_step_elapsed - ppr_dt - train_dt - diagnostic_dt,
+        )
         timing_breakdown['ppr_time'] += ppr_dt
         timing_breakdown['train_time'] += train_dt
         timing_breakdown['other_time'] += other_dt
+        timing_breakdown['diagnostic_time'] += diagnostic_dt
+
+    if dynamic_solver is not None:
+        for key, value in dynamic_solver.stats.items():
+            timing_breakdown[f'dynamic_{key}'] = value
 
     # --- Final Save ---
     total_time = time.time() - start_time_trial - total_excluded_seconds
@@ -493,6 +561,53 @@ def main():
         f"PPR: {total_ppr_time:.2f}s | "
         f"Other: {total_other_time:.2f}s ==="
     )
+    diagnostic_checks = sum(
+        stats.get('diagnostic_checks', 0) for _, stats in valid_results
+    )
+    if diagnostic_checks:
+        diagnostic_l1_sum = sum(
+            stats.get('diagnostic_l1_sum', 0.0)
+            for _, stats in valid_results
+        )
+        diagnostic_l1_max = max(
+            stats.get('diagnostic_l1_max', 0.0)
+            for _, stats in valid_results
+        )
+        disagreements = sum(
+            stats.get('diagnostic_decision_disagreements', 0)
+            for _, stats in valid_results
+        )
+        dynamic_pushes = sum(
+            stats.get('dynamic_pushes', 0) for _, stats in valid_results
+        )
+        scratch_pushes = sum(
+            stats.get('diagnostic_scratch_pushes', 0)
+            for _, stats in valid_results
+        )
+        dynamic_edge_visits = sum(
+            stats.get('dynamic_edge_visits', 0)
+            for _, stats in valid_results
+        )
+        fallback_resets = sum(
+            stats.get('dynamic_fallback_resets', 0)
+            for _, stats in valid_results
+        )
+        insert_updates = sum(
+            stats.get('dynamic_insert_updates', 0)
+            for _, stats in valid_results
+        )
+        print(
+            "=== DYN Diagnostics | "
+            f"Checks: {diagnostic_checks} | "
+            f"L1 Mean: {diagnostic_l1_sum / diagnostic_checks:.6f} | "
+            f"L1 Max: {diagnostic_l1_max:.6f} | "
+            f"Decision Disagreements: {disagreements} | "
+            f"Pushes: {dynamic_pushes} | "
+            f"Scratch Pushes ({diagnostic_checks} checks): {scratch_pushes} | "
+            f"Edge Visits: {dynamic_edge_visits} | "
+            f"Insert Updates: {insert_updates} | "
+            f"Fallback Resets: {fallback_resets} ==="
+        )
     utils.save_results(save_dir, final_data, is_final=True, args=args)
 
 
