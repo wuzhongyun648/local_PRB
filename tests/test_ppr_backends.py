@@ -4,7 +4,12 @@ import numpy as np
 import scipy.sparse as sp
 
 from src.dynamic_appr import DynamicAPPR, get_push_impl
-from src.ppr_solver import NUMBA_AVAILABLE, appr_with_diagnostics, get_appr_kernel
+from src.ppr_solver import (
+    NUMBA_AVAILABLE,
+    appr_with_diagnostics,
+    get_appr_kernel,
+    get_scratch_into_kernel,
+)
 
 
 def path_graph():
@@ -112,6 +117,41 @@ class PPRBackendContractTests(unittest.TestCase):
         )
         np.testing.assert_array_equal(actual, expected)
         np.testing.assert_array_equal(sparse.r, legacy.r)
+
+    def test_adaptive_reset_matches_fresh_scratch_after_insert(self):
+        graph, degree = path_graph()
+        solver = DynamicAPPR(
+            push_impl=get_push_impl("python"),
+            scratch_impl=get_scratch_into_kernel("python"),
+        )
+        solver.solve(
+            3, graph.indptr, graph.indices, degree,
+            np.array([1.0, 0.0, 0.0]), 0.85, 1e-4,
+            source_indices=np.array([0], dtype=np.int64),
+            changed_nodes_hint=np.empty(0, dtype=np.int64),
+        )
+
+        triangle = graph.copy().tolil()
+        triangle[0, 2] = 1.0
+        triangle[2, 0] = 1.0
+        triangle = triangle.tocsr()
+        triangle_degree = np.asarray(triangle.sum(axis=1)).reshape(-1)
+        source = np.array([0.0, 0.0, 1.0])
+        actual = solver.solve(
+            3, triangle.indptr, triangle.indices, triangle_degree,
+            source, 0.85, 1e-4,
+            source_indices=np.array([2], dtype=np.int64),
+            changed_nodes_hint=np.array([0, 2], dtype=np.int64),
+        ).copy()
+        expected = appr_with_diagnostics(
+            3, triangle.indptr, triangle.indices, triangle_degree,
+            source, 0.85, 1e-4, backend="python",
+            seed_nodes=np.array([2], dtype=np.int64),
+        )[0]
+        np.testing.assert_array_equal(actual, expected)
+        self.assertTrue(solver.last_stats["adaptive_reset"])
+        self.assertEqual(solver.stats["adaptive_resets"], 1)
+        self.assertEqual(solver.stats["insert_updates"], 0)
 
 
 if __name__ == "__main__":

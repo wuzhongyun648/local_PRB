@@ -227,6 +227,11 @@ python -m src.plot_locprb_comparison \
 
 ## 12. LocPRB/DYN 性能诊断与 SciPy 结论（2026-07-22）
 
+> 2026-07-22 后续状态：当前工作树已在纯实现优化检查点之后加入 adaptive
+> scratch reset。它会在动态 source pressure 不低于 fresh scratch 时重置，并复用
+> workspace；这属于算法/求解策略变化，不能再按本节所述的纯 DYN 解读。短结果与
+> 触发率见 `benchmarks/ADAPTIVE_DYN_T100.md`。
+
 ### 当前代码状态
 
 - 当前性能诊断提交为 `519fd0f perf: compile and diagnose dynamic APPR`。

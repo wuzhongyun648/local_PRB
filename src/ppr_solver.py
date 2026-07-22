@@ -30,15 +30,18 @@ def power_iteration(P: sp.spmatrix, alpha: float, h: np.ndarray, t: int) -> np.n
     return v
 
 @njit(cache=True)
-def _appr_diagnostics(
-    num_nodes, indptr, indices, degree, h, alpha, eps, seed_nodes=None
+def _appr_scratch_into(
+    indptr, indices, degree, h, alpha, eps, seed_nodes,
+    p, r, queue, q_mark, clear_workspace,
 ):
+    """Scratch APPR core shared by allocating and reusable workspaces."""
+    num_nodes = len(p)
+    if clear_workspace:
+        p.fill(0.0)
+        r.fill(0.0)
+        q_mark.fill(False)
     front = 0
     rear = 0
-    queue = np.zeros(num_nodes + 1,dtype = np.int64)
-    q_mark = np.zeros(num_nodes + 1, dtype = np.bool_)
-    p = np.zeros(num_nodes)
-    r = np.zeros(num_nodes)
     push_count = 0
     edge_visits = 0
     initial_active = 0
@@ -85,6 +88,36 @@ def _appr_diagnostics(
     return p, push_count, edge_visits, initial_active
 
 
+@njit(cache=True)
+def _appr_diagnostics(
+    num_nodes, indptr, indices, degree, h, alpha, eps, seed_nodes=None
+):
+    p = np.zeros(num_nodes)
+    r = np.zeros(num_nodes)
+    queue = np.zeros(num_nodes + 1, dtype=np.int64)
+    q_mark = np.zeros(num_nodes + 1, dtype=np.bool_)
+    result = _appr_scratch_into(
+        indptr, indices, degree, h, alpha, eps, seed_nodes,
+        p, r, queue, q_mark, False,
+    )
+    return result[0], result[1], result[2], result[3]
+
+
+def _appr_diagnostics_python(
+    num_nodes, indptr, indices, degree, h, alpha, eps, seed_nodes=None
+):
+    p = np.zeros(num_nodes)
+    r = np.zeros(num_nodes)
+    queue = np.zeros(num_nodes + 1, dtype=np.int64)
+    q_mark = np.zeros(num_nodes + 1, dtype=np.bool_)
+    core = getattr(_appr_scratch_into, "py_func", _appr_scratch_into)
+    result = core(
+        indptr, indices, degree, h, alpha, eps, seed_nodes,
+        p, r, queue, q_mark, False,
+    )
+    return result[0], result[1], result[2], result[3]
+
+
 def get_appr_kernel(backend="auto"):
     """Resolve the scratch APPR kernel without duplicating its algorithm."""
     if backend == "auto":
@@ -96,7 +129,22 @@ def get_appr_kernel(backend="auto"):
             )
         return _appr_diagnostics
     if backend == "python":
-        return getattr(_appr_diagnostics, "py_func", _appr_diagnostics)
+        return _appr_diagnostics_python
+    raise ValueError(f"Unknown PPR backend: {backend!r}")
+
+
+def get_scratch_into_kernel(backend="auto"):
+    """Resolve the shared scratch core for a caller-owned workspace."""
+    if backend == "auto":
+        backend = "numba" if NUMBA_AVAILABLE else "python"
+    if backend == "numba":
+        if not NUMBA_AVAILABLE:
+            raise RuntimeError(
+                "The numba PPR backend was requested, but numba is unavailable"
+            )
+        return _appr_scratch_into
+    if backend == "python":
+        return getattr(_appr_scratch_into, "py_func", _appr_scratch_into)
     raise ValueError(f"Unknown PPR backend: {backend!r}")
 
 

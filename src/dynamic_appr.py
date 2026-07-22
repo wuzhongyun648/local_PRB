@@ -80,6 +80,43 @@ def appr_push(
     return push_count, edge_visits, initial_active
 
 
+@njit(cache=True)
+def source_pressure_reset(
+    current_support, previous_support, source, previous_source, degree, eps
+):
+    """Compare sparse dynamic-delta pressure with fresh-source pressure."""
+    scratch_pressure = 0.0
+    for idx in range(len(current_support)):
+        u = current_support[idx]
+        scratch_pressure += abs(source[u]) / (eps * degree[u])
+
+    delta_pressure = 0.0
+    i = 0
+    j = 0
+    while i < len(current_support) or j < len(previous_support):
+        if j >= len(previous_support) or (
+            i < len(current_support)
+            and current_support[i] < previous_support[j]
+        ):
+            u = current_support[i]
+            i += 1
+        elif i >= len(current_support) or previous_support[j] < current_support[i]:
+            u = previous_support[j]
+            j += 1
+        else:
+            u = current_support[i]
+            i += 1
+            j += 1
+        delta_pressure += abs(source[u] - previous_source[u]) / (
+            eps * degree[u]
+        )
+    return (
+        scratch_pressure > 0.0 and delta_pressure >= scratch_pressure,
+        delta_pressure,
+        scratch_pressure,
+    )
+
+
 def get_push_impl(backend="auto"):
     """Resolve the DYN push kernel without maintaining two implementations."""
     if backend == "auto":
@@ -106,9 +143,24 @@ class DynamicAPPR:
     between consecutive solves is handled by the endpoint INSERTUPDATE repair.
     """
 
-    def __init__(self, push_impl=None, diagnostics=False):
+    def __init__(
+        self, push_impl=None, scratch_impl=None, diagnostics=False,
+        auto_record=True,
+    ):
         self.push_impl = appr_push if push_impl is None else push_impl
+        if scratch_impl is None:
+            from .ppr_solver import get_scratch_into_kernel
+
+            python_push = getattr(appr_push, "py_func", None)
+            backend = (
+                "python"
+                if not NUMBA_AVAILABLE or self.push_impl is python_push
+                else "numba"
+            )
+            scratch_impl = get_scratch_into_kernel(backend)
+        self.scratch_impl = scratch_impl
         self.diagnostics = diagnostics
+        self.auto_record = auto_record
         self.stats = {
             "solves": 0,
             "initializations": 0,
@@ -118,8 +170,12 @@ class DynamicAPPR:
             "pushes": 0,
             "edge_visits": 0,
             "initial_active_nodes": 0,
+            "adaptive_resets": 0,
+            "dynamic_continuations": 0,
+            "adaptive_reset_pushes": 0,
         }
         self.last_stats = {}
+        self._pending_stats = None
         self.reset()
 
     def reset(self):
@@ -131,6 +187,8 @@ class DynamicAPPR:
         self.alpha = None
         self.num_nodes = None
         self.nnz = None
+        self.queue = None
+        self.queued = None
 
     def _insert_one_direction(self, u, v, new_degree, alpha):
         old_degree = new_degree - 1.0
@@ -181,8 +239,38 @@ class DynamicAPPR:
         initialize = cold_start
         fallback_reset = False
         changed_nodes = np.empty(0, dtype=np.int64)
+        graph_changed = not initialize and nnz != self.nnz
+        valid_insert = False
+        invalid_change = False
+
+        if source_indices is None:
+            current_support = np.flatnonzero(source != 0.0)
+        else:
+            current_support = np.asarray(source_indices, dtype=np.int64)
+
+        adaptive_reset = False
+        delta_pressure = 0.0
+        scratch_pressure = 0.0
         if not initialize:
-            graph_changed = nnz != self.nnz
+            (
+                adaptive_reset,
+                delta_pressure,
+                scratch_pressure,
+            ) = source_pressure_reset(
+                current_support,
+                self.source_support,
+                source,
+                self.source,
+                degree,
+                eps,
+            )
+
+        reset_degree_full = bool(adaptive_reset and graph_changed)
+        if not initialize and adaptive_reset:
+            if changed_nodes_hint is not None:
+                changed_nodes = np.asarray(changed_nodes_hint, dtype=np.int64)
+                reset_degree_full = graph_changed and len(changed_nodes) != 2
+        elif not initialize:
             if changed_nodes_hint is None:
                 degree_delta = degree - self.degree
                 changed_nodes = np.flatnonzero(degree_delta)
@@ -218,17 +306,27 @@ class DynamicAPPR:
                 initialize = True
                 fallback_reset = True
 
-        if source_indices is None:
-            current_support = np.flatnonzero(source != 0.0)
-        else:
-            current_support = np.asarray(source_indices, dtype=np.int64)
-
-        if initialize:
-            self.p = np.zeros(num_nodes, dtype=np.float64)
-            self.r = source.copy()
-            self.source = source.copy()
-            self.source_support = current_support.copy()
-            active_seed = current_support
+        if initialize or adaptive_reset:
+            if self.p is None or len(self.p) != num_nodes:
+                self.p = np.zeros(num_nodes, dtype=np.float64)
+                self.r = np.zeros(num_nodes, dtype=np.float64)
+                self.queue = np.zeros(num_nodes + 1, dtype=np.int64)
+                self.queued = np.zeros(num_nodes + 1, dtype=np.bool_)
+            scratch_result = self.scratch_impl(
+                indptr,
+                indices,
+                degree,
+                source,
+                alpha,
+                eps,
+                current_support,
+                self.p,
+                self.r,
+                self.queue,
+                self.queued,
+                True,
+            )
+            push_count, edge_visits, initial_active = scratch_result[1:4]
         else:
             if len(changed_nodes):
                 self._insert_update(changed_nodes, degree, alpha)
@@ -239,37 +337,80 @@ class DynamicAPPR:
             self.r[source_support] += (
                 source[source_support] - self.source[source_support]
             )
-            self.source[self.source_support] = 0.0
-            self.source[current_support] = source[current_support]
-            self.source_support = current_support.copy()
             active_seed = np.union1d(source_support, changed_nodes).astype(
                 np.int64
             )
+            push_count, edge_visits, initial_active = self.push_impl(
+                indptr, indices, degree, self.p, self.r, alpha, eps, active_seed
+            )
+
+        if self.source is None or len(self.source) != num_nodes:
+            self.source = np.zeros(num_nodes, dtype=np.float64)
+        elif self.source_support is not None:
+            self.source[self.source_support] = 0.0
+        self.source[current_support] = source[current_support]
+        self.source_support = current_support.copy()
 
         source_changed = int(
-            np.count_nonzero(source)
-            if initialize
+            len(current_support)
+            if initialize or adaptive_reset
             else len(source_support)
-        )
-        push_count, edge_visits, initial_active = self.push_impl(
-            indptr, indices, degree, self.p, self.r, alpha, eps, active_seed
         )
         self.alpha = alpha
         self.num_nodes = num_nodes
-        if initialize or self.degree is None:
+        if initialize or self.degree is None or fallback_reset or reset_degree_full:
             self.degree = degree.copy()
         elif len(changed_nodes):
             self.degree[changed_nodes] = degree[changed_nodes]
         self.nnz = nnz
-        inserted = int(not initialize and len(changed_nodes) == 2)
+        inserted = int(
+            not initialize and not adaptive_reset and len(changed_nodes) == 2
+        )
+        self._pending_stats = (
+            cold_start,
+            initialize,
+            fallback_reset,
+            adaptive_reset,
+            delta_pressure,
+            scratch_pressure,
+            inserted,
+            source_changed,
+            int(initial_active),
+            int(push_count),
+            int(edge_visits),
+        )
+        if self.auto_record:
+            self.record_last_stats()
+        return self.p
+
+    def record_last_stats(self):
+        """Commit counters outside the solver timing when requested."""
+        if self._pending_stats is None:
+            return
+        (
+            cold_start,
+            initialize,
+            fallback_reset,
+            adaptive_reset,
+            delta_pressure,
+            scratch_pressure,
+            inserted,
+            source_changed,
+            initial_active,
+            push_count,
+            edge_visits,
+        ) = self._pending_stats
         self.last_stats = {
             "cold_start": bool(cold_start),
             "fallback_reset": bool(fallback_reset),
+            "adaptive_reset": bool(adaptive_reset),
+            "delta_pressure": delta_pressure,
+            "scratch_pressure": scratch_pressure,
             "insert_update": bool(inserted),
             "source_changed_nodes": source_changed,
-            "initial_active_nodes": int(initial_active),
-            "pushes": int(push_count),
-            "edge_visits": int(edge_visits),
+            "initial_active_nodes": initial_active,
+            "pushes": push_count,
+            "edge_visits": edge_visits,
         }
         if self.diagnostics:
             self.last_stats.update(
@@ -284,4 +425,11 @@ class DynamicAPPR:
         self.stats["pushes"] += int(push_count)
         self.stats["edge_visits"] += int(edge_visits)
         self.stats["initial_active_nodes"] += int(initial_active)
-        return self.p
+        self.stats["adaptive_resets"] += int(adaptive_reset)
+        self.stats["dynamic_continuations"] += int(
+            not initialize and not adaptive_reset
+        )
+        self.stats["adaptive_reset_pushes"] += int(
+            push_count if adaptive_reset else 0
+        )
+        self._pending_stats = None

@@ -171,8 +171,13 @@ source delta、历史 residual、数组分配、push/edge visits 和自适应 sc
 - 该结果说明实现开销已显著降低，但低 source overlap 导致的额外 push 仍是主要瓶颈；
   下一步进入可明确汇报的自适应 scratch reset。此项会改变 DYN 的求解策略，必须单独
   记录并验证输出、regret 与触发次数。
+- 已实现基于 degree/epsilon 归一化 source pressure 的自适应 reset，并复用 scratch
+  workspace。该版本是 adaptive hybrid，属于求解策略变化，不再等同于纯 DYN。
+- `T=100` 七数据集 PPR 总时间比 LocPRB 低约 10.9%，但逐数据集仅 PPA、Vessel 达到
+  DYN < Loc；其余五个仍未达到。除 PPA 外 regret/决策完全一致；PPA regret 相差 1，
+  有 10/100 次决策分歧。详见 `benchmarks/ADAPTIVE_DYN_T100.md`。
 
-状态：进行中（完成纯实现优化检查点，准备自适应策略）。
+状态：进行中（自适应短验证完成，进入 T=1000 判断）。
 
 ## Milestone 4：`T=1000` 验证
 

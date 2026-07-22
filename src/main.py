@@ -32,7 +32,7 @@ warnings.filterwarnings("ignore", message=".*SparseEfficiencyWarning.*")
 from src.EENet import EE_Net
 from src import ppr_solver
 from src import utils
-from src.dynamic_appr import DynamicAPPR, get_push_impl
+from src.dynamic_appr import DynamicAPPR, get_push_impl, source_pressure_reset
 from src.experiment_configs import (
     DEFAULT_EE_NET_POOL_STEP,
     DEFAULT_HIDDEN,
@@ -264,7 +264,11 @@ def run_experiment(run_id,args, save_dir):
         else None
     )
     dynamic_solver = (
-        DynamicAPPR(push_impl=push_impl)
+        DynamicAPPR(
+            push_impl=push_impl,
+            scratch_impl=ppr_solver.get_scratch_into_kernel(args.ppr_backend),
+            auto_record=False,
+        )
         if args.method == 'dyn_locPRB'
         else None
     )
@@ -303,6 +307,28 @@ def run_experiment(run_id,args, save_dir):
                 args.appr_eps,
                 np.empty(0, dtype=np.int64),
             )
+            ppr_solver.get_scratch_into_kernel(args.ppr_backend)(
+                P_current_csr.indptr,
+                P_current_csr.indices,
+                warm_degree,
+                warm_source,
+                args.alpha,
+                args.appr_eps,
+                np.empty(0, dtype=np.int64),
+                np.zeros(num_nodes, dtype=np.float64),
+                np.zeros(num_nodes, dtype=np.float64),
+                np.zeros(num_nodes + 1, dtype=np.int64),
+                np.zeros(num_nodes + 1, dtype=np.bool_),
+                True,
+            )
+            source_pressure_reset(
+                np.empty(0, dtype=np.int64),
+                np.empty(0, dtype=np.int64),
+                warm_source,
+                warm_source,
+                warm_degree,
+                args.appr_eps,
+            )
         warmup_seconds = time.perf_counter() - warmup_t0
 
     setup_seconds = time.perf_counter() - end_to_end_t0 - warmup_seconds
@@ -318,6 +344,7 @@ def run_experiment(run_id,args, save_dir):
     dynamic_changed_nodes_hint = np.empty(0, dtype=np.int64)
     timing_breakdown = {
         'ppr_time': 0.0,
+        'ppr_accounting_time': 0.0,
         'train_time': 0.0,
         'other_time': 0.0,
         'loader_time': 0.0,
@@ -446,6 +473,7 @@ def run_experiment(run_id,args, save_dir):
 
         current_p = None
         ppr_dt = 0.0
+        ppr_accounting_dt = 0.0
         diagnostic_dt = 0.0
         scratch_diagnostic_p = None
         
@@ -476,11 +504,16 @@ def run_experiment(run_id,args, save_dir):
                     args.appr_eps,
                     source_indices,
                 )
+            ppr_dt = time.perf_counter() - ppr_t0
+            accounting_t0 = time.perf_counter()
+            if args.method == 'dyn_locPRB':
+                dynamic_solver.record_last_stats()
+            else:
                 timing_breakdown['scratch_solves'] += 1
                 timing_breakdown['scratch_pushes'] += int(scratch_pushes)
                 timing_breakdown['scratch_edge_visits'] += int(scratch_edge_visits)
                 timing_breakdown['scratch_initial_active_nodes'] += int(scratch_active)
-            ppr_dt = time.perf_counter() - ppr_t0
+            ppr_accounting_dt = time.perf_counter() - accounting_t0
             if (
                 args.method == 'dyn_locPRB'
                 and args.ppr_diagnostics
@@ -630,6 +663,7 @@ def run_experiment(run_id,args, save_dir):
             - decision_dt,
         )
         timing_breakdown['ppr_time'] += ppr_dt
+        timing_breakdown['ppr_accounting_time'] += ppr_accounting_dt
         timing_breakdown['train_time'] += train_dt
         timing_breakdown['other_time'] += other_dt
         timing_breakdown['loader_time'] += loader_dt
