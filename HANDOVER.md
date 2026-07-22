@@ -1,6 +1,6 @@
 # Fast Bandit 项目交接文档
 
-更新时间：2026-07-18
+更新时间：2026-07-22
 
 ## 1. 当前目标
 
@@ -224,3 +224,65 @@ python -m src.plot_locprb_comparison \
 - 不要仅根据目录名判断实验完整性；检查 `config.txt` 和 `final_results.npy` 的实际 shape。
 - 不要把 evaluation 时间与 online 时间混为同一口径。
 - 修改数据协议后，现有历史结果不能与新结果直接作最终公平比较。
+
+## 12. LocPRB/DYN 性能诊断与 SciPy 结论（2026-07-22）
+
+### 当前代码状态
+
+- 当前性能诊断提交为 `519fd0f perf: compile and diagnose dynamic APPR`。
+- `src/ppr_solver.py` 的 scratch LocPRB push 和 `src/dynamic_appr.py` 的 DYN push 都有 Numba `@njit(cache=True)` 实现，Numba 不可用时回退到 Python。
+- 已加入 `--ppr_diagnostics` 和 `--ppr_diagnostic_every` 诊断参数。
+- 曾实现“稀疏活动队列”DYN 优化：Vessel 有明显收益，但 Collab/PPA 仍慢于 scratch，因此已按决定回滚，当前正式代码不包含该实验性优化。
+
+### scratch LocPRB 的含义
+
+scratch LocPRB 就是普通 LocPRB：每一轮都从 `p=0, r=s_t` 开始重新计算 APPR。DYN-LocPRB 则保留上轮 `(p, r)`，并注入 source delta `s_t-s_(t-1)`。
+
+DYN 不保证 push 数少于 scratch。当相邻轮的 source 支持集合重叠很低时，delta 同时包含移除旧 source 和加入新 source 的正负残差，再加上历史残差，可能比 scratch 触发更多 push。短诊断中 OGB 数据的 `Insert Updates=0`，原因是在线正边已存在于初始训练图，因此没有真正触发动态插边。
+
+### Numba 与纯 Python 诊断
+
+- 合成测试中，Numba DYN 内核比纯 Python DYN 快约 101–112 倍，两者输出完全一致。
+- Collab，`T=100`，同进程/同 seed，两个局部方法均强制使用纯 Python：
+  - scratch LocPRB PPR：56.002180 s；online total：60.511288 s。
+  - DYN-LocPRB PPR：33.315273 s；online total：37.676929 s。
+  - DYN 的 PPR 时间减少 40.51%，online total 减少 37.73%；两者 regret 均为 93。
+- 这复现了 Test A/A10 中 DYN 快 30%–40% 的现象，但该结论是“两者都不使用 Numba”时的相对结果，不应为了保留此相对加速而关闭 Numba，因为绝对时间会大幅恶化。
+
+### 七数据集纯 Python LocPRB/DYN 与 PRB 对照
+
+诊断协议：`T=20, runs=1, workers=1, power_T=50`，使用真实数据和同一 seed；LocPRB/DYN 强制调用 `.py_func`；跳过不计入 online time 的周期 evaluation 传播。这是性能诊断，不是可用于论文的完整实验。
+
+| Dataset | LocPRB PPR (s) | DYN PPR (s) | PRB PPR (s) | DYN 相对 LocPRB |
+|---|---:|---:|---:|---:|
+| MovieLens | 0.362889 | 0.073057 | 0.033764 | -79.9% |
+| AmazonFashion | 0.250791 | 0.080782 | 0.026455 | -67.8% |
+| Facebook | 0.422976 | 0.296077 | 0.039886 | -30.0% |
+| GrQc | 0.282095 | 0.111795 | 0.046723 | -60.4% |
+| Collab | 15.215712 | 10.067396 | 9.450419 | -33.8% |
+| PPA | 36.913420 | 21.588538 | 244.236736 | -41.5% |
+| Vessel | 101.406671 | 23.697892 | 88.318819 | -76.6% |
+
+在该短诊断中，三种方法在每个数据集上的 regret 一致。纯 Python DYN 在七个数据集上都快于纯 Python scratch。PRB 在 MovieLens、AmazonFashion、Facebook、GrQc 和 Collab 上更快；DYN 在 PPA 和 Vessel 上分别比 PRB 快约 91.2% 和 73.2%。
+
+### SciPy 稀疏矩阵加速的可行性
+
+当前纯 Python scratch/DYN 只把 SciPy CSR 用作图存储（`indptr`/`indices`），APPR 核心仍是队列/push 循环；它们没有像 PRB 那样使用 SciPy sparse `P @ v` 执行核心传播。PRB 虽然没有 Numba，但 `P @ v` 实际在 SciPy 的编译内核中运行，因此在小/中图上仍然很快。
+
+LocPRB 可以利用 SciPy，但不能在不改变计算方式的情况下直接把局部 push 替换为一次 `P @ v`：
+
+1. LocPRB 是带动态阈值和活动队列的不规则局部传播，PRB 则是固定次数的全图 SpMV。
+2. 全图 SciPy SpMV 需要每次扫描长度为 `n` 的向量和大量边，在 PPA/Vessel 上可能消除局部算法优势。
+3. 把逐节点 Gauss–Seidel push 改成批量 Jacobi 更新会改变 push 顺序和近似路径，需重新验证 APPR 误差、决策分歧和 regret，不能默认与现有 LocPRB 完全等价。
+4. 只对活动子图执行 `P[active].T @ r[active]` 理论可行，但频繁的 CSR 切片、临时稀疏矩阵和数组分配可能比 Numba 小队列 push 更慢。
+
+### 推荐的后续实现
+
+如果继续优化，优先实现自适应混合内核，不建议全面替换现有 Numba push：
+
+- 活动节点/活动边很少时，使用 Numba local push。
+- 活动集合足够大时，尝试 SciPy batch SpMV。
+- DYN 保留上轮 `(p,r)`；source delta 过大、残差漂移或预计成本高于 scratch 时，自适应回退到 scratch LocPRB。
+- 切换阈值应通过 MovieLens/Amazon/Facebook/GrQc/Collab/PPA/Vessel 的活动比例和时间曲线实测确定，不应只在单一数据集上调参。
+
+任何 SciPy/混合内核变更都应先运行小规模合同测试，同时检查 APPR `L1/Linf` 误差、每轮推荐是否一致、regret、push 数以及排除 test/evaluation 后的 PPR 时间。
