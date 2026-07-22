@@ -165,6 +165,12 @@ def parse_arguments():
         default=50,
         help='Rounds between scratch-vs-DYN diagnostic checks',
     )
+    parser.add_argument(
+        '--evaluation_every',
+        type=int,
+        default=50,
+        help='Periodic fixed-test interval; 0 disables excluded evaluation for timing runs',
+    )
     parser.add_argument('--hidden', type=int, default=DEFAULT_HIDDEN, help='EE-Net exploitation hidden width (Network_exploitation)')
     parser.add_argument(
         '--kernel_size',
@@ -185,6 +191,8 @@ def parse_arguments():
         parser.error("--init_topk must be >= 0")
     if args.ppr_diagnostic_every < 1:
         parser.error("--ppr_diagnostic_every must be >= 1")
+    if args.evaluation_every < 0:
+        parser.error("--evaluation_every must be >= 0")
         
     return args
 
@@ -328,7 +336,11 @@ def run_experiment(run_id,args, save_dir):
         'diagnostic_scratch_pushes': 0,
     }
     _t_build0 = time.perf_counter()
-    fixed_test_set = bandit_loader.testing_dataset()
+    fixed_test_set = (
+        bandit_loader.testing_dataset()
+        if args.evaluation_every > 0
+        else []
+    )
     testset_build_dt = time.perf_counter() - _t_build0
     timing_breakdown['testset_build_time'] = testset_build_dt
     total_excluded_seconds += testset_build_dt
@@ -336,7 +348,7 @@ def run_experiment(run_id,args, save_dir):
     for t in range(args.T):
         step_start = time.perf_counter()
         eval_dt = 0.0
-        if t % 50 == 0:
+        if args.evaluation_every > 0 and t % args.evaluation_every == 0:
             eval_t0 = time.perf_counter()
             test_hits = 0
             test_user_offset = 0
