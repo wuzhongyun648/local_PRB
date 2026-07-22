@@ -63,7 +63,17 @@ PRB regret 与时间参照，避免反复运行 PRB。
 - 由项目负责人选定本阶段暂用的 PRB 参照版本。
 - 将选择和限制写入本文件并提交。
 
-状态：进行中，等待 PRB 结果盘点和选择。
+选择：方案 A。
+
+- MovieLens、AmazonFashion、Facebook、GrQc、Collab、Vessel 使用
+  `results/online_link_prediction/` 中 2026-07-20 同批完整 PRB 结果的前
+  1000 轮。
+- PPA 使用同批 `log/dynamic_queue_20260719_162701/PPA_PRB.log` 中约
+  1000 轮的 partial reference。
+- 本阶段不重跑 PRB；最终完整实验仍需在统一、无资源争用的环境重跑。
+- 结构化参照见 `benchmarks/prb_option_a_reference.json`。
+
+状态：完成。
 
 ## Milestone 1：统一五版本诊断口径
 
@@ -144,7 +154,7 @@ source delta、历史 residual、数组分配、push/edge visits 和自适应 sc
 
 | Milestone | 状态 | Commit | 验证/结果 | 结论 |
 |---|---|---|---|---|
-| 0 PRB 参照 | 进行中 | 待定 | 待定 | 等待选择 |
+| 0 PRB 参照 | 完成 | 待本次提交 | `benchmarks/prb_option_a_reference.json` | 采用方案 A；PPA 标记为 partial |
 | 1 统一口径 | 未开始 | 待定 | 待定 | 待定 |
 | 2 短诊断 | 未开始 | 待定 | 待定 | 待定 |
 | 3 Numba 优化 | 未开始 | 待定 | 待定 | 待定 |
