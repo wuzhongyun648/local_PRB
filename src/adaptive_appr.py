@@ -626,7 +626,7 @@ class AdaptiveAPPR:
         return self.last_prediction
 
     def scratch_prediction(self, num_nodes, indptr):
-        """Build a forced-scratch transition without running the DYN predictor."""
+        """Build a scratch transition without running the DYN predictor."""
         self._ensure_workspace(num_nodes)
         return {
             "mode": SCRATCH,
@@ -645,6 +645,52 @@ class AdaptiveAPPR:
             "changed_nodes": np.empty(0, dtype=np.int64),
             "insertion_kind": 0,
             "nnz": int(indptr[-1]),
+        }
+
+    def dynamic_prediction(
+        self,
+        num_nodes,
+        indptr,
+        degree,
+        alpha,
+        changed_nodes_hint,
+    ):
+        """Build a forced-DYN transition without running the cost predictor.
+
+        The first solve and unsupported graph transitions safely use scratch.
+        Every valid continuation uses the exact source-delta/insert-update DYN
+        branch.
+        """
+        self._ensure_workspace(num_nodes)
+        degree = np.asarray(degree)
+        nnz = int(indptr[-1])
+        cold = (
+            self.nnz is None
+            or self.alpha != alpha
+            or self.degree is None
+            or len(self.degree) != num_nodes
+        )
+        changed, insertion_kind, invalid = self._resolve_change(
+            degree, nnz, changed_nodes_hint
+        )
+        mode = SCRATCH if cold or invalid else DYNAMIC
+        return {
+            "mode": mode,
+            "dynamic_cost": 0.0,
+            "scratch_cost": 0.0,
+            "dynamic_predicted_pushes": 0,
+            "scratch_predicted_pushes": 0,
+            "dynamic_edge_lb": 0,
+            "scratch_edge_lb": 0,
+            "dynamic_predicted_edges": 0,
+            "scratch_predicted_edges": 0,
+            "cold_start": bool(cold),
+            "invalid_graph": bool(invalid),
+            "changed_nodes": (
+                changed if insertion_kind else np.empty(0, dtype=np.int64)
+            ),
+            "insertion_kind": insertion_kind,
+            "nnz": nnz,
         }
 
     def execute(

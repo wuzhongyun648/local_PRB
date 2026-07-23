@@ -2,6 +2,19 @@
 
 更新时间：2026-07-23
 
+## 当前四个正式接口
+
+正式 CLI 只接受：
+
+- `PRB`
+- `numba-locPRB`：每轮 scratch，不运行 predictor。
+- `numba-adaptive-dyn`：每轮预测 DYN/scratch 成本并选择。
+- `numba-pure-dyn`：不运行 predictor；首轮 cold-start，随后所有合法轮强制 DYN，
+  只有不支持的图变化才安全 reset。
+
+三个局部方法均固定使用 Numba，已删除公开的 `--ppr_backend`。Python 内核只保留
+为单元测试和输出合同参考，不再是正式运行接口。
+
 ## 0. 当前唯一任务（覆盖下文旧计划）
 
 当前只做 T=1000 验证，不做 Test C 或最终完整实验。旧提交 `ff3291c` /
@@ -219,7 +232,7 @@ LocPRB smoke test 示例：
 ```bash
 python -u main.py \
   --graph_name MovieLens \
-  --method LocPRB \
+  --method numba-locPRB \
   --alpha 0.85 \
   --appr_eps 8.33e-05 \
   --T 100 \

@@ -245,6 +245,39 @@ class AdaptiveAPPRTests(unittest.TestCase):
             self.assertFalse(np.any(solver.queued))
         self.assertEqual(modes, [SCRATCH, DYNAMIC, SCRATCH, DYNAMIC])
 
+    def test_forced_dynamic_uses_only_cold_start_then_dynamic(self):
+        graph, degree = path_graph()
+        solver = AdaptiveAPPR("python")
+        modes = []
+        for source, support in (
+            (np.array([1.0, 0.0, 0.0]), np.array([0], dtype=np.int64)),
+            (np.array([0.0, 1.0, 0.0]), np.array([1], dtype=np.int64)),
+            (np.array([0.0, 0.0, 1.0]), np.array([2], dtype=np.int64)),
+        ):
+            prediction = solver.dynamic_prediction(
+                3,
+                graph.indptr,
+                degree,
+                0.85,
+                np.empty(0, dtype=np.int64),
+            )
+            modes.append(prediction["mode"])
+            solver.execute(
+                graph.indptr,
+                graph.indices,
+                degree,
+                source,
+                0.85,
+                1e-4,
+                support,
+                prediction,
+            )
+            self.assert_linear_invariant(solver, graph, degree, source)
+        self.assertEqual(modes, [SCRATCH, DYNAMIC, DYNAMIC])
+        self.assertEqual(solver.stats["scratch_resets"], 1)
+        self.assertEqual(solver.stats["dynamic_continuations"], 2)
+        self.assertEqual(solver.stats["prediction_cache_scrubs"], 0)
+
     @unittest.skipUnless(NUMBA_AVAILABLE, "Numba is not installed")
     def test_python_and_numba_sequences_are_identical(self):
         graph, degree = path_graph()

@@ -73,12 +73,16 @@ GRAPH_BY_DATASET = {
     "Vessel": utils.Vessel,
 }
 
+PRB_METHOD = "PRB"
+LOC_METHOD = "numba-locPRB"
+ADAPTIVE_DYN_METHOD = "numba-adaptive-dyn"
+PURE_DYN_METHOD = "numba-pure-dyn"
+LOCAL_METHODS = (LOC_METHOD, ADAPTIVE_DYN_METHOD, PURE_DYN_METHOD)
 METHOD_ALIASES = {
-    "PRB": "PRB",
-    "LocPRB": "LocPRB",
-    "dyn_locPRB": "dyn_locPRB",
-    "dyn-LocPRB": "dyn_locPRB",
-    "DynLocPRB": "dyn_locPRB",
+    PRB_METHOD: PRB_METHOD,
+    LOC_METHOD: LOC_METHOD,
+    ADAPTIVE_DYN_METHOD: ADAPTIVE_DYN_METHOD,
+    PURE_DYN_METHOD: PURE_DYN_METHOD,
 }
 METHOD_LABEL_SUFFIX = ""
 
@@ -94,7 +98,7 @@ def parse_method(value):
 
 
 def build_ee_net(dim, n_arm, args, kernel_size):
-    """Build the EE-Net shared by PRB and both LocPRB solvers."""
+    """Build the EE-Net shared by all four formal methods."""
     return EE_Net(
         dim,
         n_arm,
@@ -130,13 +134,23 @@ def parse_arguments():
     Parses and validates command-line arguments for the experiment.
 
     This function defines the available hyperparameters, dataset options, and 
-    algorithm choices (LocPRB vs. PRB). It also enforces constraints, such as
+    four formal algorithm choices. It also enforces constraints, such as
     mutual exclusivity between the approximation error (epsilon) and power 
     iteration steps.
     """
-    parser = argparse.ArgumentParser(description="Run PRB/LocPRB Experiments")
+    parser = argparse.ArgumentParser(
+        description=(
+            "Run PRB, Numba LocPRB, adaptive Numba DYN, or pure Numba DYN"
+        )
+    )
     parser.add_argument('--graph_name', type=str, required=True, choices=sorted(MAIN_DATASET_CONFIGS))
-    parser.add_argument('--method', type=parse_method, required=True)
+    parser.add_argument(
+        '--method',
+        type=parse_method,
+        required=True,
+        metavar='{PRB,numba-locPRB,numba-adaptive-dyn,numba-pure-dyn}',
+        help='Formal execution interface; all local methods use Numba',
+    )
     parser.add_argument('--alpha', type=float, required=True, help='PPR alpha (Damping factor)')
     
     group = parser.add_mutually_exclusive_group(required=True)
@@ -152,13 +166,6 @@ def parse_arguments():
     parser.add_argument('--n_neg', type=int, default=DEFAULT_N_NEG, help='Number of negative candidates per round (k = n_neg + 1)')
     parser.add_argument('--init_hops', type=int, default=0, help='H-hop warm-start radius for the initial graph; 0 keeps the default graph')
     parser.add_argument('--init_topk', type=int, default=0, help='Use top-k highest-degree seed nodes for warm-start; 0 disables warm-start')
-    parser.add_argument(
-        '--ppr_backend',
-        choices=('numba', 'python'),
-        default='numba',
-        help='Execution backend for LocPRB and dyn_locPRB; PRB always uses SciPy',
-    )
-    
     parser.add_argument('--init_edges', type=int, default=None, help='Limit the number of initial edges for PPA/Vessel')
     parser.add_argument(
         '--ppr_diagnostics',
@@ -185,9 +192,11 @@ def parse_arguments():
         help='EE-Net exploration Conv1d kernel length; default 5 for Vessel, 40 otherwise',
     )
     args = parser.parse_args()
-    if args.method in ('LocPRB', 'dyn_locPRB') and args.appr_eps is None:
-        parser.error("Methods LocPRB and dyn_locPRB require --appr_eps")
-    if args.method == 'PRB' and args.power_T is None:
+    if args.method in LOCAL_METHODS and args.appr_eps is None:
+        parser.error(
+            "Numba LocPRB/adaptive-DYN/pure-DYN methods require --appr_eps"
+        )
+    if args.method == PRB_METHOD and args.power_T is None:
         parser.error("Method PRB requires --power_T")
     if args.n_neg < 1:
         parser.error("--n_neg must be >= 1")
@@ -258,15 +267,15 @@ def run_experiment(run_id,args, save_dir):
     ee_net = build_ee_net(
         bandit_loader.dim, bandit_loader.n_arm, args, current_kernel_size
     )
-    resolved_backend = 'scipy' if args.method == 'PRB' else args.ppr_backend
+    resolved_backend = 'scipy' if args.method == PRB_METHOD else 'numba'
     scratch_kernel = (
-        ppr_solver.get_timing_kernel(args.ppr_backend)
-        if args.method in ('LocPRB', 'dyn_locPRB')
+        ppr_solver.get_timing_kernel('numba')
+        if args.method in LOCAL_METHODS
         else None
     )
     local_solver = (
-        AdaptiveAPPR(backend=args.ppr_backend)
-        if args.method in ('LocPRB', 'dyn_locPRB')
+        AdaptiveAPPR(backend='numba')
+        if args.method in LOCAL_METHODS
         else None
     )
     results_list = [] # [time, regret, loss1, loss2, ppr_norm]
@@ -282,21 +291,33 @@ def run_experiment(run_id,args, save_dir):
         warm_degree = np.asarray(graph_manager.degree).reshape(-1).astype(np.int64)
         warm_degree[warm_degree == 0] = 1
         warm_source = np.zeros(num_nodes, dtype=np.float64)
-        if args.method in ('LocPRB', 'dyn_locPRB'):
-            warm_solver = AdaptiveAPPR(backend=args.ppr_backend)
+        if args.method in LOCAL_METHODS:
+            warm_solver = AdaptiveAPPR(backend='numba')
             warm_support = np.empty(0, dtype=np.int64)
-            warm_prediction = warm_solver.predict(
-                num_nodes,
-                P_current_csr.indptr,
-                P_current_csr.indices,
-                warm_degree,
-                warm_source,
-                args.alpha,
-                args.appr_eps,
-                warm_support,
-                np.empty(0, dtype=np.int64),
-                force_scratch=args.method == 'LocPRB',
-            )
+            if args.method == ADAPTIVE_DYN_METHOD:
+                warm_prediction = warm_solver.predict(
+                    num_nodes,
+                    P_current_csr.indptr,
+                    P_current_csr.indices,
+                    warm_degree,
+                    warm_source,
+                    args.alpha,
+                    args.appr_eps,
+                    warm_support,
+                    np.empty(0, dtype=np.int64),
+                )
+            elif args.method == PURE_DYN_METHOD:
+                warm_prediction = warm_solver.dynamic_prediction(
+                    num_nodes,
+                    P_current_csr.indptr,
+                    warm_degree,
+                    args.alpha,
+                    np.empty(0, dtype=np.int64),
+                )
+            else:
+                warm_prediction = warm_solver.scratch_prediction(
+                    num_nodes, P_current_csr.indptr
+                )
             warm_solver.execute(
                 P_current_csr.indptr,
                 P_current_csr.indices,
@@ -395,14 +416,14 @@ def run_experiment(run_id,args, save_dir):
                     if isinstance(val, (list, np.ndarray)): val = val[0]
                     t_h_dense[real_id] = val
                 
-                if args.method in ('LocPRB', 'dyn_locPRB'):
+                if args.method in LOCAL_METHODS:
                     t_degree = np.array(graph_manager.degree).flatten().astype(np.int64)
                     t_degree[t_degree == 0] = 1
                     t_p = scratch_kernel(
                         num_nodes, P_current_csr.indptr, P_current_csr.indices, 
                         t_degree, t_h_dense, args.alpha, args.appr_eps
                     )[0]
-                elif args.method == 'PRB':
+                elif args.method == PRB_METHOD:
                     t_p = ppr_solver.power_iteration(
                         P_current_csr, args.alpha, t_h_dense, args.power_T
                     )
@@ -473,11 +494,11 @@ def run_experiment(run_id,args, save_dir):
         diagnostic_dt = 0.0
         scratch_diagnostic_p = None
         
-        if args.method in ('LocPRB', 'dyn_locPRB'):
+        if args.method in LOCAL_METHODS:
             ppr_t0 = time.perf_counter()
             degree = np.array(graph_manager.degree).flatten().astype(np.int64)
             degree[degree == 0] = 1
-            if args.method == 'dyn_locPRB':
+            if args.method == ADAPTIVE_DYN_METHOD:
                 prediction_t0 = time.perf_counter()
                 prediction = local_solver.predict(
                     num_nodes,
@@ -563,10 +584,16 @@ def run_experiment(run_id,args, save_dir):
                     timing_breakdown[
                         'adaptive_scratch_execution_time'
                     ] += selected_execution_dt
-            else:
-                cache_control_t0 = time.perf_counter()
-                prediction = local_solver.predict(
+            elif args.method == PURE_DYN_METHOD:
+                prediction = local_solver.dynamic_prediction(
                     num_nodes,
+                    P_current_csr.indptr,
+                    degree,
+                    args.alpha,
+                    local_changed_nodes_hint,
+                )
+                execute_t0 = time.perf_counter()
+                current_p = local_solver.execute(
                     P_current_csr.indptr,
                     P_current_csr.indices,
                     degree,
@@ -574,11 +601,20 @@ def run_experiment(run_id,args, save_dir):
                     args.alpha,
                     args.appr_eps,
                     source_indices,
-                    local_changed_nodes_hint,
-                    force_scratch=True,
+                    prediction,
                 )
-                cache_control_dt = (
-                    time.perf_counter() - cache_control_t0
+                selected_execution_dt = time.perf_counter() - execute_t0
+                if prediction['mode'] == DYNAMIC:
+                    timing_breakdown[
+                        'adaptive_dynamic_execution_time'
+                    ] += selected_execution_dt
+                else:
+                    timing_breakdown[
+                        'adaptive_scratch_execution_time'
+                    ] += selected_execution_dt
+            else:
+                prediction = local_solver.scratch_prediction(
+                    num_nodes, P_current_csr.indptr
                 )
                 execute_t0 = time.perf_counter()
                 current_p = local_solver.execute(
@@ -604,7 +640,7 @@ def run_experiment(run_id,args, save_dir):
                 )
             ppr_dt = ppr_wall_dt - ppr_excluded_dt
             if (
-                args.method == 'dyn_locPRB'
+                args.method == ADAPTIVE_DYN_METHOD
                 and scratch_diagnostic_p is not None
             ):
                 diagnostic_post_t0 = time.perf_counter()
@@ -627,7 +663,7 @@ def run_experiment(run_id,args, save_dir):
                 diagnostic_dt + adaptive_prediction_dt + cache_control_dt
             )
             
-        elif args.method == 'PRB':
+        elif args.method == PRB_METHOD:
             ppr_t0 = time.perf_counter()
             current_p = ppr_solver.power_iteration(
                 P_current_csr, 
@@ -667,7 +703,7 @@ def run_experiment(run_id,args, save_dir):
             previous_nnz = int(P_current_csr.nnz)
             previous_degree = (
                 degree
-                if args.method in ('LocPRB', 'dyn_locPRB')
+                if args.method in LOCAL_METHODS
                 else None
             )
             if args.graph_name in ['MovieLens', 'Amazon_fashion']:
@@ -678,7 +714,7 @@ def run_experiment(run_id,args, save_dir):
             P_current_csr = graph_manager.P.tocsr()  
             degree = np.array(graph_manager.degree).flatten().astype(np.int64)
             degree[degree == 0] = 1  
-            if args.method in ('LocPRB', 'dyn_locPRB'):
+            if args.method in LOCAL_METHODS:
                 endpoints = np.asarray(
                     [int(connected_u), int(connected_v)], dtype=np.int64
                 )
@@ -764,7 +800,7 @@ def run_experiment(run_id,args, save_dir):
         timing_breakdown['adaptive_prediction_time'] += adaptive_prediction_dt
         timing_breakdown['cache_control_time'] += cache_control_dt
         timing_breakdown['adaptive_prediction_calls'] += int(
-            args.method == 'dyn_locPRB'
+            args.method == ADAPTIVE_DYN_METHOD
         )
         timing_breakdown['train_time'] += train_dt
         timing_breakdown['other_time'] += other_dt
@@ -776,9 +812,11 @@ def run_experiment(run_id,args, save_dir):
         ppr_round_times.append(ppr_dt)
 
     if local_solver is not None:
-        solver_prefix = (
-            'adaptive_' if args.method == 'dyn_locPRB' else 'loc_'
-        )
+        solver_prefix = {
+            ADAPTIVE_DYN_METHOD: 'adaptive_',
+            PURE_DYN_METHOD: 'pure_dynamic_',
+            LOC_METHOD: 'loc_',
+        }[args.method]
         for key, value in local_solver.stats.items():
             timing_breakdown[f'{solver_prefix}{key}'] = value
 
@@ -852,7 +890,7 @@ def run_experiment(run_id,args, save_dir):
         'seed': seed,
         'dataset': args.graph_name,
         'method': args.method,
-        'requested_backend': args.ppr_backend,
+        'requested_backend': resolved_backend,
         'resolved_backend': resolved_backend,
         'rounds': args.T,
         'final_regret': sum_regret,
@@ -891,17 +929,13 @@ def main():
     mp.set_start_method('spawn', force=True)
     args = parse_arguments()
     current_time = datetime.datetime.now().strftime("%Y%m%d%H%M%S%f")
-    if args.method in ('LocPRB', 'dyn_locPRB'):
+    if args.method in LOCAL_METHODS:
         param_str = f"eps{args.appr_eps}"
     else:
         param_str = f"powT{args.power_T}"
     ks_resolved = utils.resolve_ee_net_kernel_size(args.graph_name, args.kernel_size)
     method_label = f"{args.method}{METHOD_LABEL_SUFFIX}"
-    backend_label = (
-        f"_backend{args.ppr_backend}"
-        if args.method in ('LocPRB', 'dyn_locPRB')
-        else ''
-    )
+    backend_label = "_backendnumba" if args.method in LOCAL_METHODS else ""
     folder_name = (
         f"{args.graph_name}_{method_label}{backend_label}_alpha{args.alpha}_{param_str}_"
         f"T{args.T}_k{args.n_neg + 1}_initH{args.init_hops}_initK{args.init_topk}_"
@@ -987,8 +1021,8 @@ def main():
         'schema_version': 1,
         'dataset': args.graph_name,
         'method': args.method,
-        'requested_backend': args.ppr_backend,
-        'resolved_backend': 'scipy' if args.method == 'PRB' else args.ppr_backend,
+        'requested_backend': 'scipy' if args.method == PRB_METHOD else 'numba',
+        'resolved_backend': 'scipy' if args.method == PRB_METHOD else 'numba',
         'runs': args.runs,
         'rounds': args.T,
         'final_regret_mean': float(np.mean(final_data[:, -1, 1])),
@@ -1018,6 +1052,7 @@ def main():
                 or key.startswith('scratch_')
                 or key.startswith('dynamic_')
                 or key.startswith('adaptive_')
+                or key.startswith('pure_dynamic_')
             )
             and key not in {
                 'adaptive_prediction_time',

@@ -17,8 +17,8 @@ master_log="$log_dir/master.log"
 resource_log="$log_dir/resources.log"
 
 read -r -a datasets <<< "${DATASETS:-MovieLens Amazon_fashion Facebook Grqc Collab PPA Vessel}"
-read -r -a methods <<< "${METHODS:-LocPRB dyn_locPRB}"
-read -r -a backends <<< "${BACKENDS:-python numba}"
+read -r -a methods <<< \
+  "${METHODS:-numba-locPRB numba-adaptive-dyn numba-pure-dyn}"
 diagnostics="${DIAGNOSTICS:-0}"
 diagnostic_every="${DIAGNOSTIC_EVERY:-1}"
 
@@ -55,43 +55,40 @@ printf 'matrix_start=%s rounds=%s runs=%s seed=%s python=%s cuda=%q\n' \
   "$stamp" "$rounds" "$runs" "$seed" "$python_bin" "$cuda_device" | tee "$master_log"
 
 for dataset in "${datasets[@]}"; do
-  for backend in "${backends[@]}"; do
-    for method in "${methods[@]}"; do
-      name="${dataset}_${method}_${backend}"
-      extra_args=()
-      if [[ "$diagnostics" == "1" && "$method" == "dyn_locPRB" ]]; then
-        extra_args+=(--ppr_diagnostics --ppr_diagnostic_every "$diagnostic_every")
-        name="${name}_diagnostics"
-      fi
-      snapshot_resources
-      printf '[%s] START %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$name" | tee -a "$master_log"
-      if CUDA_VISIBLE_DEVICES="$cuda_device" \
-        OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 \
-        VECLIB_MAXIMUM_THREADS=1 NUMEXPR_NUM_THREADS=1 \
-        "$python_bin" -u main.py \
-          --graph_name "$dataset" \
-          --method "$method" \
-          --ppr_backend "$backend" \
-          --alpha 0.85 \
-          --appr_eps "${eps[$dataset]}" \
-          --T "$rounds" \
-          --lr1 "${lr1[$dataset]}" \
-          --lr2 "${lr2[$dataset]}" \
-          --kernel_size "${kernel[$dataset]}" \
-          --runs "$runs" \
-          --workers 1 \
-          --seed "$seed" \
-          --evaluation_every 0 \
-          "${extra_args[@]}" \
-          > "$log_dir/${name}.log" 2>&1; then
-        printf '[%s] DONE %s status=0\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$name" | tee -a "$master_log"
-      else
-        rc=$?
-        failures+=("${name}:${rc}")
-        printf '[%s] DONE %s status=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$name" "$rc" | tee -a "$master_log"
-      fi
-      snapshot_resources
-    done
+  for method in "${methods[@]}"; do
+    name="${dataset}_${method}"
+    extra_args=()
+    if [[ "$diagnostics" == "1" && "$method" == "numba-adaptive-dyn" ]]; then
+      extra_args+=(--ppr_diagnostics --ppr_diagnostic_every "$diagnostic_every")
+      name="${name}_diagnostics"
+    fi
+    snapshot_resources
+    printf '[%s] START %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$name" | tee -a "$master_log"
+    if CUDA_VISIBLE_DEVICES="$cuda_device" \
+      OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 \
+      VECLIB_MAXIMUM_THREADS=1 NUMEXPR_NUM_THREADS=1 \
+      "$python_bin" -u main.py \
+        --graph_name "$dataset" \
+        --method "$method" \
+        --alpha 0.85 \
+        --appr_eps "${eps[$dataset]}" \
+        --T "$rounds" \
+        --lr1 "${lr1[$dataset]}" \
+        --lr2 "${lr2[$dataset]}" \
+        --kernel_size "${kernel[$dataset]}" \
+        --runs "$runs" \
+        --workers 1 \
+        --seed "$seed" \
+        --evaluation_every 0 \
+        "${extra_args[@]}" \
+        > "$log_dir/${name}.log" 2>&1; then
+      printf '[%s] DONE %s status=0\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$name" | tee -a "$master_log"
+    else
+      rc=$?
+      failures+=("${name}:${rc}")
+      printf '[%s] DONE %s status=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$name" "$rc" | tee -a "$master_log"
+    fi
+    snapshot_resources
   done
 done
 

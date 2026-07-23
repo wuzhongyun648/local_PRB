@@ -78,12 +78,24 @@ CUDA_VISIBLE_DEVICES=0 python main.py ...
 
 ## Main Experiments
 
+The formal runner exposes exactly four methods:
+
+- `PRB`
+- `numba-locPRB`
+- `numba-adaptive-dyn`
+- `numba-pure-dyn`
+
+The local methods always use Numba. Python kernels remain internal correctness
+references and are not CLI methods. Adaptive DYN predicts DYN versus scratch
+each round; pure DYN skips that predictor and uses DYN after the unavoidable
+first-round cold start.
+
 LocPRB example:
 
 ```bash
 python main.py \
   --graph_name MovieLens \
-  --method LocPRB \
+  --method numba-locPRB \
   --alpha 0.85 \
   --appr_eps 8.33e-05 \
   --T 10000 \
@@ -125,9 +137,9 @@ results/final/data/table1/
 Run `main.py` with the same dataset and hyperparameters while changing `--appr_eps`.
 
 ```bash
-python main.py --graph_name MovieLens --method LocPRB --alpha 0.85 --appr_eps 8.33e-04 --T 10000 --lr1 0.0073 --lr2 0.0004 --runs 10 --workers 10
-python main.py --graph_name MovieLens --method LocPRB --alpha 0.85 --appr_eps 8.33e-05 --T 10000 --lr1 0.0073 --lr2 0.0004 --runs 10 --workers 10
-python main.py --graph_name MovieLens --method LocPRB --alpha 0.85 --appr_eps 8.33e-06 --T 10000 --lr1 0.0073 --lr2 0.0004 --runs 10 --workers 10
+python main.py --graph_name MovieLens --method numba-locPRB --alpha 0.85 --appr_eps 8.33e-04 --T 10000 --lr1 0.0073 --lr2 0.0004 --runs 10 --workers 10
+python main.py --graph_name MovieLens --method numba-locPRB --alpha 0.85 --appr_eps 8.33e-05 --T 10000 --lr1 0.0073 --lr2 0.0004 --runs 10 --workers 10
+python main.py --graph_name MovieLens --method numba-locPRB --alpha 0.85 --appr_eps 8.33e-06 --T 10000 --lr1 0.0073 --lr2 0.0004 --runs 10 --workers 10
 ```
 
 ## Alpha Ablation
@@ -135,10 +147,10 @@ python main.py --graph_name MovieLens --method LocPRB --alpha 0.85 --appr_eps 8.
 Run `main.py` with the same dataset and hyperparameters while changing `--alpha`.
 
 ```bash
-python main.py --graph_name MovieLens --method LocPRB --alpha 0.60 --appr_eps 8.33e-05 --T 10000 --lr1 0.0073 --lr2 0.0004 --runs 10 --workers 10
-python main.py --graph_name MovieLens --method LocPRB --alpha 0.70 --appr_eps 8.33e-05 --T 10000 --lr1 0.0073 --lr2 0.0004 --runs 10 --workers 10
-python main.py --graph_name MovieLens --method LocPRB --alpha 0.85 --appr_eps 8.33e-05 --T 10000 --lr1 0.0073 --lr2 0.0004 --runs 10 --workers 10
-python main.py --graph_name MovieLens --method LocPRB --alpha 0.90 --appr_eps 8.33e-05 --T 10000 --lr1 0.0073 --lr2 0.0004 --runs 10 --workers 10
+python main.py --graph_name MovieLens --method numba-locPRB --alpha 0.60 --appr_eps 8.33e-05 --T 10000 --lr1 0.0073 --lr2 0.0004 --runs 10 --workers 10
+python main.py --graph_name MovieLens --method numba-locPRB --alpha 0.70 --appr_eps 8.33e-05 --T 10000 --lr1 0.0073 --lr2 0.0004 --runs 10 --workers 10
+python main.py --graph_name MovieLens --method numba-locPRB --alpha 0.85 --appr_eps 8.33e-05 --T 10000 --lr1 0.0073 --lr2 0.0004 --runs 10 --workers 10
+python main.py --graph_name MovieLens --method numba-locPRB --alpha 0.90 --appr_eps 8.33e-05 --T 10000 --lr1 0.0073 --lr2 0.0004 --runs 10 --workers 10
 ```
 
 ## Baseline Experiments
@@ -281,7 +293,7 @@ Use these checks after structural changes:
 ```bash
 python -m py_compile main.py online_baselines_run.py src/*.py src/baselines_new/*.py
 python archive/maintenance_scripts/results_manifest.py
-python main.py --graph_name MovieLens --method LocPRB --alpha 0.85 --appr_eps 8.33e-05 --T 1 --lr1 0.0073 --lr2 0.0004 --runs 1 --workers 1
+python main.py --graph_name MovieLens --method numba-locPRB --alpha 0.85 --appr_eps 8.33e-05 --T 1 --lr1 0.0073 --lr2 0.0004 --runs 1 --workers 1
 python online_baselines_run.py --datasets MovieLens --methods EE-Net --T 1 --runs 1 --workers 1
 ```
 

@@ -20,14 +20,14 @@ log_master() {
 log_master "QUEUE_START ppa_gpu=${ppa_gpu} vessel_gpu=${vessel_gpu} runs=10 workers=10"
 
 CUDA_VISIBLE_DEVICES="$ppa_gpu" nohup python -u main.py \
-  --graph_name PPA --method dyn_locPRB --alpha 0.85 --appr_eps 1.74e-06 \
+  --graph_name PPA --method numba-adaptive-dyn --alpha 0.85 --appr_eps 1.74e-06 \
   --T 5000 --lr1 0.01 --lr2 0.004 --runs 10 --workers 10 \
   > "$log_dir/PPA_dyn_locPRB.log" 2>&1 < /dev/null &
 ppa_pid=$!
 log_master "START name=PPA_dyn_locPRB gpu=${ppa_gpu} pid=${ppa_pid}"
 
 CUDA_VISIBLE_DEVICES="$vessel_gpu" nohup python -u main.py \
-  --graph_name Vessel --method dyn_locPRB --alpha 0.85 --appr_eps 2.86e-07 \
+  --graph_name Vessel --method numba-adaptive-dyn --alpha 0.85 --appr_eps 2.86e-07 \
   --T 5000 --lr1 0.01 --lr2 0.004 --runs 10 --workers 10 \
   > "$log_dir/Vessel_dyn_locPRB.log" 2>&1 < /dev/null &
 vessel_dyn_pid=$!
@@ -53,7 +53,7 @@ if ((ppa_status != 0 || vessel_dyn_status != 0)); then
 fi
 
 CUDA_VISIBLE_DEVICES="$vessel_gpu" nohup python -u main.py \
-  --graph_name Vessel --method LocPRB --alpha 0.85 --appr_eps 2.86e-07 \
+  --graph_name Vessel --method numba-locPRB --alpha 0.85 --appr_eps 2.86e-07 \
   --T 5000 --lr1 0.01 --lr2 0.004 --runs 10 --workers 10 \
   > "$log_dir/Vessel_LocPRB.log" 2>&1 < /dev/null &
 vessel_loc_pid=$!
