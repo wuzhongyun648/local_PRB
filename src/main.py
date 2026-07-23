@@ -648,10 +648,14 @@ def run_experiment(run_id,args, save_dir):
                 endpoints = np.asarray(
                     [int(connected_u), int(connected_v)], dtype=np.int64
                 )
+                nnz_delta = int(P_current_csr.nnz) - previous_nnz
+                endpoint_delta = degree[endpoints] - previous_degree[endpoints]
                 if (
-                    int(P_current_csr.nnz) - previous_nnz == 2
-                    and np.all(
-                        degree[endpoints] - previous_degree[endpoints] == 1
+                    (nnz_delta == 2 and np.all(endpoint_delta == 1))
+                    or (
+                        nnz_delta == 1
+                        and np.count_nonzero(endpoint_delta == 1) == 1
+                        and np.count_nonzero(endpoint_delta == 0) == 1
                     )
                 ):
                     next_dynamic_changed_nodes_hint = endpoints

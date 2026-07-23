@@ -44,6 +44,7 @@ def predict_adaptive_branch(
     alpha,
     eps,
     can_continue,
+    insertion_kind,
 ):
     """Predict from the exact candidate residual without mutating APPR state.
 
@@ -51,7 +52,13 @@ def predict_adaptive_branch(
     proxy because downstream cascade pushes cannot be known without executing
     the branch.
     """
-    scratch_cost = 0.0
+    # Exact branch-construction operations plus an exact first-frontier work
+    # lower bound. Later cascade work remains a prediction.
+    scratch_cost = float(
+        2 * len(degree)
+        + 3 * len(current_support)
+        + len(previous_support)
+    )
     scratch_active = 0
     scratch_edge_lb = 0
     for idx in range(len(current_support)):
@@ -61,7 +68,7 @@ def predict_adaptive_branch(
         if abs(value) >= threshold:
             scratch_active += 1
             scratch_edge_lb += degree[u]
-            scratch_cost += max(float(degree[u]), abs(value) / eps)
+            scratch_cost += 4.0 + float(degree[u])
 
     if not can_continue:
         return (
@@ -117,20 +124,25 @@ def predict_adaptive_branch(
     correction_ab = 0.0
     correction_ba = 0.0
     correction_bb = 0.0
-    if len(changed_nodes) == 2:
+    if insertion_kind != 0:
         insert_a = int(changed_nodes[0])
         insert_b = int(changed_nodes[1])
         old_degree_a = degree[insert_a] - 1.0
-        old_degree_b = degree[insert_b] - 1.0
         mass_a = p[insert_a] / old_degree_a
-        mass_b = p[insert_b] / old_degree_b
         scale = 1.0 / (1.0 - alpha)
         correction_aa = -mass_a * scale
         correction_ab = alpha * mass_a * scale
-        correction_ba = alpha * mass_b * scale
-        correction_bb = -mass_b * scale
+        if insertion_kind == 2:
+            old_degree_b = degree[insert_b] - 1.0
+            mass_b = p[insert_b] / old_degree_b
+            correction_ba = alpha * mass_b * scale
+            correction_bb = -mass_b * scale
 
-    dynamic_cost = 0.0
+    dynamic_cost = float(
+        candidate_count
+        + 2 * (len(current_support) + len(previous_support))
+        + len(changed_nodes)
+    )
     dynamic_active = 0
     dynamic_edge_lb = 0
     for idx in range(candidate_count):
@@ -144,7 +156,7 @@ def predict_adaptive_branch(
         if abs(value) >= threshold:
             dynamic_active += 1
             dynamic_edge_lb += degree[u]
-            dynamic_cost += max(float(degree[u]), abs(value) / eps)
+            dynamic_cost += 4.0 + float(degree[u])
 
     mode = DYNAMIC if dynamic_cost < scratch_cost else SCRATCH
     return (
@@ -175,6 +187,7 @@ def execute_selected_branch(
     eps,
     queue,
     queued,
+    insertion_kind,
 ):
     """Apply the selected transition and local pushes in one compiled kernel."""
     num_nodes = len(p)
@@ -185,20 +198,21 @@ def execute_selected_branch(
             u = current_support[idx]
             residual[u] = source[u]
     else:
-        if len(changed_nodes) == 2:
+        if insertion_kind != 0:
             a = int(changed_nodes[0])
             b = int(changed_nodes[1])
             old_degree_a = degree[a] - 1.0
-            old_degree_b = degree[b] - 1.0
             mass_a = p[a] / old_degree_a
-            mass_b = p[b] / old_degree_b
             p[a] *= degree[a] / old_degree_a
-            p[b] *= degree[b] / old_degree_b
             scale = 1.0 / (1.0 - alpha)
             residual[a] -= mass_a * scale
             residual[b] += alpha * mass_a * scale
-            residual[b] -= mass_b * scale
-            residual[a] += alpha * mass_b * scale
+            if insertion_kind == 2:
+                old_degree_b = degree[b] - 1.0
+                mass_b = p[b] / old_degree_b
+                p[b] *= degree[b] / old_degree_b
+                residual[b] -= mass_b * scale
+                residual[a] += alpha * mass_b * scale
 
         i = 0
         j = 0
@@ -354,25 +368,40 @@ class AdaptiveAPPR:
 
     def _resolve_change(self, degree, nnz, changed_nodes_hint):
         if self.nnz is None:
-            return np.empty(0, dtype=np.int64), False, False
+            return np.empty(0, dtype=np.int64), 0, False
         graph_changed = nnz != self.nnz
         if changed_nodes_hint is None:
             degree_delta = degree - self.degree
             changed = np.flatnonzero(degree_delta).astype(np.int64)
         else:
             changed = np.asarray(changed_nodes_hint, dtype=np.int64)
-        valid_insert = (
-            graph_changed
-            and nnz - self.nnz == 2
-            and len(changed) == 2
-            and np.all(degree[changed] - self.degree[changed] == 1)
-            and np.all(degree[changed] > 1)
-        )
+        insertion_kind = 0
+        if graph_changed and len(changed) == 2:
+            delta = degree[changed] - self.degree[changed]
+            if (
+                nnz - self.nnz == 2
+                and np.all(delta == 1)
+                and np.all(degree[changed] > 1)
+            ):
+                insertion_kind = 2
+            elif (
+                nnz - self.nnz == 1
+                and np.count_nonzero(delta == 1) == 1
+                and np.count_nonzero(delta == 0) == 1
+            ):
+                source_pos = int(np.flatnonzero(delta == 1)[0])
+                target_pos = 1 - source_pos
+                if degree[changed[source_pos]] > 1:
+                    changed = np.asarray(
+                        [changed[source_pos], changed[target_pos]],
+                        dtype=np.int64,
+                    )
+                    insertion_kind = 1
         invalid = (
-            (graph_changed and not valid_insert)
+            (graph_changed and insertion_kind == 0)
             or (not graph_changed and len(changed) != 0)
         )
-        return changed, valid_insert, invalid
+        return changed, insertion_kind, invalid
 
     def predict(
         self,
@@ -397,7 +426,7 @@ class AdaptiveAPPR:
             or self.degree is None
             or len(self.degree) != num_nodes
         )
-        changed, valid_insert, invalid = self._resolve_change(
+        changed, insertion_kind, invalid = self._resolve_change(
             degree, nnz, changed_nodes_hint
         )
         can_continue = not cold and not invalid and not force_scratch
@@ -409,10 +438,11 @@ class AdaptiveAPPR:
             source,
             current_support,
             self.previous_support,
-            changed if valid_insert else np.empty(0, dtype=np.int64),
+            changed if insertion_kind else np.empty(0, dtype=np.int64),
             alpha,
             eps,
             can_continue,
+            insertion_kind,
         )
         mode = SCRATCH if force_scratch or cold or invalid else int(prediction[0])
         self.last_prediction = {
@@ -425,7 +455,8 @@ class AdaptiveAPPR:
             "scratch_edge_lb": int(prediction[6]),
             "cold_start": bool(cold),
             "invalid_graph": bool(invalid),
-            "changed_nodes": changed if valid_insert else np.empty(0, dtype=np.int64),
+            "changed_nodes": changed if insertion_kind else np.empty(0, dtype=np.int64),
+            "insertion_kind": insertion_kind,
             "nnz": nnz,
         }
         return self.last_prediction
@@ -444,6 +475,7 @@ class AdaptiveAPPR:
             "cold_start": self.nnz is None,
             "invalid_graph": False,
             "changed_nodes": np.empty(0, dtype=np.int64),
+            "insertion_kind": 0,
             "nnz": int(indptr[-1]),
         }
 
@@ -479,6 +511,7 @@ class AdaptiveAPPR:
             eps,
             self.queue,
             self.queued,
+            int(prediction["insertion_kind"]),
         )
         self.previous_support = current_support.copy()
         if mode == SCRATCH or self.degree is None or prediction["invalid_graph"]:
@@ -593,6 +626,7 @@ class AdaptiveAPPR:
                 eps,
                 queue,
                 queued,
+                int(prediction["insertion_kind"]),
             )
             outputs[name] = {
                 "p": p,

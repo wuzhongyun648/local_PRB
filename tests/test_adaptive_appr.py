@@ -27,7 +27,7 @@ class AdaptiveAPPRTests(unittest.TestCase):
     def assert_linear_invariant(
         self, solver, graph, degree, source, alpha=0.85
     ):
-        transition = graph @ sp.diags(1.0 / degree)
+        transition = graph.T @ sp.diags(1.0 / degree)
         error = (
             solver.p
             - alpha * (transition @ solver.p)
@@ -79,11 +79,11 @@ class AdaptiveAPPRTests(unittest.TestCase):
             np.array([1], dtype=np.int64),
             np.array([0], dtype=np.int64),
             np.empty(0, dtype=np.int64),
-            0.85, 0.1, True,
+            0.85, 0.1, True, 0,
         )
         # Candidate residuals are exactly -0.99 at node 0 and 0.48 at node 1.
-        expected_dynamic = max(2.0, 0.99 / 0.1) + max(3.0, 0.48 / 0.1)
-        expected_scratch = max(3.0, 0.5 / 0.1)
+        expected_dynamic = 3 * 2 + (4.0 + 2.0) + (4.0 + 3.0)
+        expected_scratch = 2 * 3 + 3 * 1 + 1 + (4.0 + 3.0)
         self.assertAlmostEqual(result[1], expected_dynamic)
         self.assertAlmostEqual(result[2], expected_scratch)
         self.assertEqual(result[0], SCRATCH)
@@ -158,6 +158,42 @@ class AdaptiveAPPRTests(unittest.TestCase):
             0.85, 1e-4, np.array([2], dtype=np.int64), reset_prediction,
         )
         np.testing.assert_array_equal(solver.p, expected)
+
+    def test_directed_edge_insertion_is_supported(self):
+        graph, degree = path_graph()
+        solver = AdaptiveAPPR("python")
+        solver.solve(
+            3, graph.indptr, graph.indices, degree,
+            np.array([1.0, 0.0, 0.0]), 0.85, 1e-4,
+            np.array([0], dtype=np.int64), np.empty(0, dtype=np.int64),
+        )
+        directed = graph.copy().tolil()
+        directed[0, 2] = 1.0
+        directed = directed.tocsr()
+        directed_degree = np.diff(directed.indptr).astype(np.int64)
+        source = np.array([0.0, 0.0, 1.0])
+        prediction = solver.predict(
+            3, directed.indptr, directed_degree, source, 0.85, 1e-4,
+            np.array([2], dtype=np.int64), np.array([0, 2], dtype=np.int64),
+        )
+        self.assertEqual(prediction["insertion_kind"], 1)
+        np.testing.assert_array_equal(
+            prediction["changed_nodes"], np.array([0, 2], dtype=np.int64)
+        )
+        prediction["mode"] = DYNAMIC
+        actual = solver.execute(
+            directed.indptr, directed.indices, directed_degree, source,
+            0.85, 1e-4, np.array([2], dtype=np.int64), prediction,
+        ).copy()
+        expected = appr_with_diagnostics(
+            3, directed.indptr, directed.indices, directed_degree, source,
+            0.85, 1e-4, backend="python",
+            seed_nodes=np.array([2], dtype=np.int64),
+        )[0]
+        self.assertLess(float(np.sum(np.abs(actual - expected))), 0.01)
+        self.assert_linear_invariant(
+            solver, directed, directed_degree, source
+        )
 
     def test_scratch_dynamic_scratch_dynamic_sequence(self):
         graph, degree = path_graph()
