@@ -324,10 +324,12 @@ def run_experiment(run_id,args, save_dir):
     timing_breakdown = {
         'ppr_time': 0.0,
         'ppr_time_including_prediction': 0.0,
+        'ppr_time_including_prediction_and_control': 0.0,
         'adaptive_prediction_time': 0.0,
         'adaptive_prediction_calls': 0,
         'adaptive_reset_write_weight': RESET_WRITE_WEIGHT,
         'adaptive_cache_scrub_bytes': PREDICTION_CACHE_SCRUB_BYTES,
+        'cache_control_time': 0.0,
         'adaptive_dynamic_execution_time': 0.0,
         'adaptive_scratch_execution_time': 0.0,
         'train_time': 0.0,
@@ -467,6 +469,7 @@ def run_experiment(run_id,args, save_dir):
         ppr_dt = 0.0
         ppr_wall_dt = 0.0
         adaptive_prediction_dt = 0.0
+        cache_control_dt = 0.0
         diagnostic_dt = 0.0
         scratch_diagnostic_p = None
         
@@ -564,6 +567,11 @@ def run_experiment(run_id,args, save_dir):
                 prediction = local_solver.scratch_prediction(
                     num_nodes, P_current_csr.indptr
                 )
+                cache_control_t0 = time.perf_counter()
+                local_solver.scrub_cache_control()
+                cache_control_dt = (
+                    time.perf_counter() - cache_control_t0
+                )
                 execute_t0 = time.perf_counter()
                 current_p = local_solver.execute(
                     P_current_csr.indptr,
@@ -579,7 +587,9 @@ def run_experiment(run_id,args, save_dir):
                     time.perf_counter() - execute_t0
                 )
             ppr_wall_dt = time.perf_counter() - ppr_t0
-            ppr_excluded_dt = adaptive_prediction_dt + diagnostic_dt
+            ppr_excluded_dt = (
+                adaptive_prediction_dt + diagnostic_dt + cache_control_dt
+            )
             if ppr_wall_dt + 1e-12 < ppr_excluded_dt:
                 raise RuntimeError(
                     "PPR timing invariant violated: excluded work exceeds wall"
@@ -605,7 +615,9 @@ def run_experiment(run_id,args, save_dir):
                     != np.argmax(scratch_diagnostic_p[diagnostic_candidate_ids])
                 )
                 diagnostic_dt += time.perf_counter() - diagnostic_post_t0
-            total_excluded_seconds += diagnostic_dt + adaptive_prediction_dt
+            total_excluded_seconds += (
+                diagnostic_dt + adaptive_prediction_dt + cache_control_dt
+            )
             
         elif args.method == 'PRB':
             ppr_t0 = time.perf_counter()
@@ -697,6 +709,7 @@ def run_experiment(run_id,args, save_dir):
             - eval_dt
             - diagnostic_dt
             - adaptive_prediction_dt
+            - cache_control_dt
         )
         ppr_norm = np.sum(np.abs(current_p))
         current_total_time_excl_overhead = step_end - start_time_trial - total_excluded_seconds
@@ -704,7 +717,7 @@ def run_experiment(run_id,args, save_dir):
         results_list.append([step_duration, sum_regret, loss1, loss2, ppr_norm])
         
         if t % 500 == 0:
-            print(f"Round {t} | Regret: {sum_regret:.0f} | Loss1: {loss1:.4f} | Loss2: {loss2:.4f} | TestAcc: {latest_test_acc:.2%} | Time: {current_total_time_excl_overhead:.4f}s (excl. testset, eval, diagnostics, DYN prediction) | Norm: {ppr_norm:.2f}", flush=True)
+            print(f"Round {t} | Regret: {sum_regret:.0f} | Loss1: {loss1:.4f} | Loss2: {loss2:.4f} | TestAcc: {latest_test_acc:.2%} | Time: {current_total_time_excl_overhead:.4f}s (excl. testset, eval, diagnostics, prediction/cache control) | Norm: {ppr_norm:.2f}", flush=True)
         
         if args.if_save and t % 1000 == 0 and t > 0:
             np.save(
@@ -721,6 +734,7 @@ def run_experiment(run_id,args, save_dir):
             online_step_elapsed
             - ppr_dt
             - adaptive_prediction_dt
+            - cache_control_dt
             - train_dt
             - diagnostic_dt
             - graph_update_dt
@@ -732,7 +746,11 @@ def run_experiment(run_id,args, save_dir):
         timing_breakdown['ppr_time_including_prediction'] += (
             ppr_dt + adaptive_prediction_dt
         )
+        timing_breakdown['ppr_time_including_prediction_and_control'] += (
+            ppr_dt + adaptive_prediction_dt + cache_control_dt
+        )
         timing_breakdown['adaptive_prediction_time'] += adaptive_prediction_dt
+        timing_breakdown['cache_control_time'] += cache_control_dt
         timing_breakdown['adaptive_prediction_calls'] += int(
             args.method == 'dyn_locPRB'
         )
@@ -760,6 +778,13 @@ def run_experiment(run_id,args, save_dir):
     timing_breakdown['online_total_time_including_prediction'] = (
         total_time + timing_breakdown['adaptive_prediction_time']
     )
+    timing_breakdown[
+        'online_total_time_including_prediction_and_control'
+    ] = (
+        total_time
+        + timing_breakdown['adaptive_prediction_time']
+        + timing_breakdown['cache_control_time']
+    )
     timing_breakdown['raw_online_trial_wall_time'] = raw_online_trial_wall
     timing_breakdown['end_to_end_time_excluding_prediction'] = (
         end_to_end_seconds - timing_breakdown['adaptive_prediction_time']
@@ -776,7 +801,7 @@ def run_experiment(run_id,args, save_dir):
     
     print(
         f">>> [Worker {run_id}] Finished. Total Time: {total_time:.2f}s "
-        "(excl. testset build, eval, diagnostics, and DYN prediction; "
+        "(excl. testset build, eval, diagnostics, prediction/cache control; "
         f"deducted {total_excluded_seconds:.2f}s) | "
         f"Total Regret: {sum_regret:.0f}",
         flush=True,
@@ -893,7 +918,7 @@ def main():
     print(f"=== All Done. Aggregated Shape: {final_data.shape} ===")
     print(
         "=== Online Time Breakdown Across All Runs "
-        f"(excl. testset build, eval, diagnostics, DYN prediction) | "
+        f"(excl. testset build, eval, diagnostics, prediction/cache control) | "
         f"Train: {total_train_time:.2f}s | "
         f"PPR: {total_ppr_time:.2f}s | "
         f"Other: {total_other_time:.2f}s ==="
@@ -963,9 +988,12 @@ def main():
                 'loader_time', 'predict_source_time', 'decision_time',
                 'evaluation_time', 'testset_build_time', 'diagnostic_time',
                 'adaptive_prediction_time', 'ppr_time_including_prediction',
+                'cache_control_time',
+                'ppr_time_including_prediction_and_control',
                 'adaptive_dynamic_execution_time',
                 'adaptive_scratch_execution_time', 'online_total_time',
                 'online_total_time_including_prediction',
+                'online_total_time_including_prediction_and_control',
                 'raw_online_trial_wall_time', 'setup_time', 'warmup_time',
                 'end_to_end_time', 'end_to_end_time_excluding_prediction'
             )
@@ -984,6 +1012,7 @@ def main():
                 'adaptive_prediction_calls',
                 'adaptive_reset_write_weight',
                 'adaptive_cache_scrub_bytes',
+                'cache_control_time',
                 'adaptive_dynamic_execution_time',
                 'adaptive_scratch_execution_time',
             }

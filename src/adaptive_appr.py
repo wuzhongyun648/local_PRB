@@ -498,6 +498,10 @@ class AdaptiveAPPR:
         )
         self.stats["prediction_cache_scrubs"] += 1
 
+    def scrub_cache_control(self):
+        """Apply the same cache state to a predictor-free control branch."""
+        self._scrub_cache_after_prediction()
+
     def _resolve_change(self, degree, nnz, changed_nodes_hint):
         if self.nnz is None:
             return np.empty(0, dtype=np.int64), 0, False
