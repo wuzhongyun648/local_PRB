@@ -566,7 +566,9 @@ class AdaptiveAPPR:
         changed, insertion_kind, invalid = self._resolve_change(
             degree, nnz, changed_nodes_hint
         )
-        can_continue = not cold and not invalid and not force_scratch
+        # A forced-scratch control still measures both valid candidates so its
+        # cache/frequency footprint matches adaptive prediction.
+        can_continue = not cold and not invalid
         prediction = self.predict_impl(
             indptr,
             indices,
