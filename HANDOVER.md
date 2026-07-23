@@ -1,6 +1,26 @@
 # Fast Bandit 项目交接文档
 
-更新时间：2026-07-22
+更新时间：2026-07-23
+
+## 0. 当前唯一任务（覆盖下文旧计划）
+
+当前只做 T=1000 验证，不做 Test C 或最终完整实验。旧提交 `ff3291c` /
+`83fd320` 使用“连续 3 次 reset 后永久锁定 scratch”的路径，导致七数据集没有
+任何真实 DYN continuation；其速度结论已经作废。
+
+当前实现位于 `src/adaptive_appr.py`：
+
+- 每轮重新构造候选 residual 并选择 DYN/scratch，没有永久锁定。
+- 候选 residual 精确包含历史 residual、source delta、有效无向插边修正。
+- cost 同时估计分支构造工作与初始传播压力；最终传播成本仍是预测量。
+- Python 与 Numba 共享同一内核；APPR `p/r/source/queue` 状态更新在同一执行内核。
+- Loc 与 adaptive DYN 复用同一种 scratch 执行路径和 caller-owned workspace。
+- `adaptive_prediction_time` 从 `ppr_time`、逐轮时间和 `online_total_time` 中扣除；
+  `ppr_time_including_prediction` 与 `online_wall_time_including_prediction` 保留原值。
+
+下一步是串行运行七数据集四组 T=1000：
+Numba Loc/DYN、Python Loc/DYN，并汇总 regret、整体、PPR、预测、训练、loader、
+图更新和其他时间。PRB 暂用 `benchmarks/prb_option_a_reference.json`。
 
 ## 1. 当前目标
 
@@ -232,11 +252,9 @@ python -m src.plot_locprb_comparison \
 > workspace；这属于算法/求解策略变化，不能再按本节所述的纯 DYN 解读。短结果与
 > 触发率见 `benchmarks/ADAPTIVE_DYN_T100.md`。
 
-> 最终 T=1000 版本进一步加入连续三次 reset 后的锁定 scratch 快路径，并将双方
-> work-counter instrumentation 移出生产求解计时。该版本七数据集均满足
-> Numba-DYN < Numba-Loc，且 paired regret 完全一致。完整口径、结果与 PRB Option A
-> 局限见 `benchmarks/T1000_FINAL_NUMBA_VALIDATION.md`。后续不得把它简称为“纯 DYN”
-> 或隐去 996/1000 轮使用锁定 scratch 路径的事实。
+> 2026-07-23 更正：连续三次 reset 后锁定 scratch 的 T=1000 结果已经作废，
+> 不得再作为 DYN < Loc 的证据。`benchmarks/T1000_FINAL_NUMBA_VALIDATION.md`
+> 仅作为错误路径审计材料。
 
 ### 当前代码状态
 

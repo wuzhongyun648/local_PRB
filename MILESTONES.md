@@ -1,6 +1,24 @@
 # Fast Bandit Milestones
 
-更新时间：2026-07-22
+更新时间：2026-07-23
+
+## 2026-07-23 状态更正
+
+提交 `ff3291c` / `83fd320` 的所谓最终 T=1000 结果不能作为 Milestone 3/4
+完成证据：当时 DYN 在连续 3 次 reset 后永久锁定为 scratch，七个数据集均只有
+冷启动及 reset、没有真实 DYN continuation；996/1000 轮只是复用 workspace 的
+scratch 快路径。该结果证明的是 scratch 实现路径差异，不是 DYN 加速。
+
+当前重新打开 Milestone 3/4，要求：
+
+- 删除永久锁定，每轮都基于候选 residual 重新判断 DYN 或 scratch。
+- 候选 residual 包含历史 residual、source delta 和有效插边修正。
+- Python/Numba 共享同一预测与执行内核；Numba 路径整体编译核心数值判断及
+  APPR 状态更新。
+- DYN 预测判断单独计时，并从 PPR time、step time、online total time 中扣除；
+  同时保留包含预测时间的原始对照字段。
+- Loc 与自适应 DYN 使用同一可复用 `p/r/queue/queued` scratch 执行内核。
+- 重新运行七数据集的 Numba 与 Python、Loc 与 DYN，均为 T=1000。
 
 ## 当前阶段目标
 
@@ -177,10 +195,10 @@ source delta、历史 residual、数组分配、push/edge visits 和自适应 sc
   DYN < Loc；其余五个仍未达到。除 PPA 外 regret/决策完全一致；PPA regret 相差 1，
   有 10/100 次决策分歧。详见 `benchmarks/ADAPTIVE_DYN_T100.md`。
 
-最终 T=1000 结果：七数据集均达到 Numba-DYN < Numba-Loc，regret 逐项完全一致；
-实现细节和算法变更见 `benchmarks/T1000_FINAL_NUMBA_VALIDATION.md`。
+此前“七数据集均达到”的结果已因永久 scratch 锁定而作废，报告
+`benchmarks/T1000_FINAL_NUMBA_VALIDATION.md` 仅保留为错误路径审计材料。
 
-状态：完成。
+状态：重新打开；真实可逆 adaptive DYN 已实现并通过单元测试，等待新 T=1000。
 
 ## Milestone 4：`T=1000` 验证
 
@@ -197,7 +215,7 @@ source delta、历史 residual、数组分配、push/edge visits 和自适应 sc
 - 若 Numba 路线未满足，给出是否进入 Python 备选路线的明确结论。
 - 本阶段到此结束，不自动启动最终完整实验。
 
-结果：
+旧结果（已作废）：
 
 - 完成七数据集、seed 0、Numba Loc/DYN 的 T=1000 串行配对验证。
 - 七数据集均满足 DYN < Loc 的隔离 PPR 时间不等式；合计快 41.1%。
@@ -206,7 +224,7 @@ source delta、历史 residual、数组分配、push/edge visits 和自适应 sc
   `Loc < PRB`；但 PRB 尚不是统一 paired rerun，PPA regret 尤其只能标记为 partial。
 - 选定 Numba 路线进入最终三版本；不启动 Test C 或完整论文实验。
 
-状态：完成（PRB 公平重跑留给最终完整实验）。
+状态：重新打开，等待 Numba/Python 新 T=1000；PRB 仍暂用 Option A。
 
 ## Milestone 完成记录
 
@@ -215,5 +233,5 @@ source delta、历史 residual、数组分配、push/edge visits 和自适应 sc
 | 0 PRB 参照 | 完成 | 待本次提交 | `benchmarks/prb_option_a_reference.json` | 采用方案 A；PPA 标记为 partial |
 | 1 统一口径 | 完成 | `e5ff896` | 7 tests + MovieLens T=1 四路 smoke | 显式后端、预热、结构化计时已完成 |
 | 2 短诊断 | 完成 | `62cd631` | `benchmarks/BACKEND_DIAGNOSIS_T20_T100.md` | 已定位 source delta 导致的额外 push |
-| 3 Numba 优化 | 完成 | `ff3291c` | 11 tests + 自适应/锁定快路径 | 明确改变求解策略，最终七数据集过线 |
-| 4 T=1000 | 完成 | `ff3291c` | `benchmarks/T1000_FINAL_NUMBA_VALIDATION.md` | 选定 Numba 三版本；PRB 为 Option A interim |
+| 3 真实 adaptive DYN | 进行中 | 待提交 | 16 tests + 短入口 | 已移除永久锁定；逐轮可逆判断 |
+| 4 T=1000 | 进行中 | 待运行 | Numba/Python 七数据集 | PRB 仍为 Option A interim |

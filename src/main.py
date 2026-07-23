@@ -32,7 +32,7 @@ warnings.filterwarnings("ignore", message=".*SparseEfficiencyWarning.*")
 from src.EENet import EE_Net
 from src import ppr_solver
 from src import utils
-from src.dynamic_appr import DynamicAPPR, get_push_impl, source_pressure_reset
+from src.adaptive_appr import AdaptiveAPPR, DYNAMIC, SCRATCH
 from src.experiment_configs import (
     DEFAULT_EE_NET_POOL_STEP,
     DEFAULT_HIDDEN,
@@ -258,29 +258,9 @@ def run_experiment(run_id,args, save_dir):
         if args.method in ('LocPRB', 'dyn_locPRB')
         else None
     )
-    diagnostic_scratch_kernel = (
-        ppr_solver.get_appr_kernel(args.ppr_backend)
+    local_solver = (
+        AdaptiveAPPR(backend=args.ppr_backend)
         if args.method in ('LocPRB', 'dyn_locPRB')
-        else None
-    )
-    push_impl = (
-        get_push_impl(args.ppr_backend)
-        if args.method == 'dyn_locPRB'
-        else None
-    )
-    dynamic_solver = (
-        DynamicAPPR(
-            push_impl=push_impl,
-            scratch_impl=ppr_solver.get_scratch_into_kernel(args.ppr_backend),
-            auto_record=False,
-        )
-        if args.method == 'dyn_locPRB'
-        else None
-    )
-    dynamic_fast_workspace = None
-    dynamic_fast_impl = (
-        ppr_solver.get_reuse_queue_kernel(args.ppr_backend)
-        if dynamic_solver is not None
         else None
     )
     results_list = [] # [time, regret, loss1, loss2, ppr_norm]
@@ -296,62 +276,29 @@ def run_experiment(run_id,args, save_dir):
         warm_degree = np.asarray(graph_manager.degree).reshape(-1).astype(np.int64)
         warm_degree[warm_degree == 0] = 1
         warm_source = np.zeros(num_nodes, dtype=np.float64)
-        if args.method == 'LocPRB':
-            scratch_kernel(
+        if args.method in ('LocPRB', 'dyn_locPRB'):
+            warm_solver = AdaptiveAPPR(backend=args.ppr_backend)
+            warm_support = np.empty(0, dtype=np.int64)
+            warm_prediction = warm_solver.predict(
                 num_nodes,
                 P_current_csr.indptr,
-                P_current_csr.indices,
                 warm_degree,
                 warm_source,
                 args.alpha,
                 args.appr_eps,
+                warm_support,
                 np.empty(0, dtype=np.int64),
+                force_scratch=args.method == 'LocPRB',
             )
-        elif args.method == 'dyn_locPRB':
-            push_impl(
-                P_current_csr.indptr,
-                P_current_csr.indices,
-                warm_degree,
-                np.zeros(num_nodes, dtype=np.float64),
-                warm_source.copy(),
-                args.alpha,
-                args.appr_eps,
-                np.empty(0, dtype=np.int64),
-            )
-            ppr_solver.get_scratch_into_kernel(args.ppr_backend)(
+            warm_solver.execute(
                 P_current_csr.indptr,
                 P_current_csr.indices,
                 warm_degree,
                 warm_source,
                 args.alpha,
                 args.appr_eps,
-                np.empty(0, dtype=np.int64),
-                np.zeros(num_nodes, dtype=np.float64),
-                np.zeros(num_nodes, dtype=np.float64),
-                np.zeros(num_nodes + 1, dtype=np.int64),
-                np.zeros(num_nodes + 1, dtype=np.bool_),
-                True,
-                True,
-            )
-            source_pressure_reset(
-                np.empty(0, dtype=np.int64),
-                np.empty(0, dtype=np.int64),
-                warm_source,
-                warm_source,
-                warm_degree,
-                args.appr_eps,
-            )
-            dynamic_fast_impl(
-                num_nodes,
-                P_current_csr.indptr,
-                P_current_csr.indices,
-                warm_degree,
-                warm_source,
-                args.alpha,
-                args.appr_eps,
-                np.empty(0, dtype=np.int64),
-                np.zeros(num_nodes + 1, dtype=np.int64),
-                np.zeros(num_nodes + 1, dtype=np.bool_),
+                warm_support,
+                warm_prediction,
             )
         warmup_seconds = time.perf_counter() - warmup_t0
 
@@ -366,8 +313,14 @@ def run_experiment(run_id,args, save_dir):
     # 从报告的 step_duration / Time / Total / TimeAcc 横轴中累计扣除：测试集构造 + 周期评测
     total_excluded_seconds = 0.0
     dynamic_changed_nodes_hint = np.empty(0, dtype=np.int64)
+    ppr_round_times = []
     timing_breakdown = {
         'ppr_time': 0.0,
+        'ppr_time_including_prediction': 0.0,
+        'adaptive_prediction_time': 0.0,
+        'adaptive_prediction_calls': 0,
+        'adaptive_dynamic_execution_time': 0.0,
+        'adaptive_scratch_execution_time': 0.0,
         'ppr_accounting_time': 0.0,
         'train_time': 0.0,
         'other_time': 0.0,
@@ -388,6 +341,13 @@ def run_experiment(run_id,args, save_dir):
         'diagnostic_l1_max': 0.0,
         'diagnostic_decision_disagreements': 0,
         'diagnostic_scratch_pushes': 0,
+        'diagnostic_scratch_edge_visits': 0,
+        'diagnostic_scratch_time': 0.0,
+        'diagnostic_dynamic_pushes': 0,
+        'diagnostic_dynamic_edge_visits': 0,
+        'diagnostic_dynamic_time': 0.0,
+        'diagnostic_prediction_comparable': 0,
+        'diagnostic_prediction_correct': 0,
     }
     _t_build0 = time.perf_counter()
     fixed_test_set = (
@@ -497,20 +457,35 @@ def run_experiment(run_id,args, save_dir):
 
         current_p = None
         ppr_dt = 0.0
+        ppr_wall_dt = 0.0
+        adaptive_prediction_dt = 0.0
         ppr_accounting_dt = 0.0
         diagnostic_dt = 0.0
         scratch_diagnostic_p = None
-        external_fast_reset_stats = None
         
         if args.method in ('LocPRB', 'dyn_locPRB'):
             ppr_t0 = time.perf_counter()
             degree = np.array(graph_manager.degree).flatten().astype(np.int64)
             degree[degree == 0] = 1
             if args.method == 'dyn_locPRB':
-                if dynamic_fast_workspace is not None:
-                    fast_queue, fast_queued = dynamic_fast_workspace
-                    external_fast_reset_stats = dynamic_fast_impl(
-                        num_nodes,
+                prediction_t0 = time.perf_counter()
+                prediction = local_solver.predict(
+                    num_nodes,
+                    P_current_csr.indptr,
+                    degree,
+                    h_dense,
+                    args.alpha,
+                    args.appr_eps,
+                    source_indices,
+                    dynamic_changed_nodes_hint,
+                )
+                adaptive_prediction_dt = time.perf_counter() - prediction_t0
+                if (
+                    args.ppr_diagnostics
+                    and t % args.ppr_diagnostic_every == 0
+                ):
+                    diagnostic_t0 = time.perf_counter()
+                    branch_diagnostics = local_solver.diagnose_branches(
                         P_current_csr.indptr,
                         P_current_csr.indices,
                         degree,
@@ -518,25 +493,47 @@ def run_experiment(run_id,args, save_dir):
                         args.alpha,
                         args.appr_eps,
                         source_indices,
-                        fast_queue,
-                        fast_queued,
+                        prediction,
                     )
-                    current_p = external_fast_reset_stats[0]
-                else:
-                    current_p = dynamic_solver.solve(
-                        num_nodes,
-                        P_current_csr.indptr,
-                        P_current_csr.indices,
-                        degree,
-                        h_dense,
-                        args.alpha,
-                        args.appr_eps,
-                        source_indices=source_indices,
-                        changed_nodes_hint=dynamic_changed_nodes_hint,
-                    )
-            else:
-                current_p, scratch_pushes, scratch_edge_visits, scratch_active = scratch_kernel(
-                    num_nodes,
+                    diagnostic_dt = time.perf_counter() - diagnostic_t0
+                    timing_breakdown['diagnostic_checks'] += 1
+                    scratch_diag = branch_diagnostics.get('scratch')
+                    dynamic_diag = branch_diagnostics.get('dynamic')
+                    if scratch_diag is not None:
+                        scratch_diagnostic_p = scratch_diag['p']
+                        timing_breakdown['diagnostic_scratch_pushes'] += (
+                            scratch_diag['pushes']
+                        )
+                        timing_breakdown['diagnostic_scratch_edge_visits'] += (
+                            scratch_diag['edge_visits']
+                        )
+                        timing_breakdown['diagnostic_scratch_time'] += (
+                            scratch_diag['time']
+                        )
+                    if dynamic_diag is not None:
+                        timing_breakdown['diagnostic_dynamic_pushes'] += (
+                            dynamic_diag['pushes']
+                        )
+                        timing_breakdown['diagnostic_dynamic_edge_visits'] += (
+                            dynamic_diag['edge_visits']
+                        )
+                        timing_breakdown['diagnostic_dynamic_time'] += (
+                            dynamic_diag['time']
+                        )
+                    if scratch_diag is not None and dynamic_diag is not None:
+                        timing_breakdown[
+                            'diagnostic_prediction_comparable'
+                        ] += 1
+                        actual_mode = (
+                            DYNAMIC
+                            if dynamic_diag['time'] < scratch_diag['time']
+                            else SCRATCH
+                        )
+                        timing_breakdown['diagnostic_prediction_correct'] += (
+                            int(prediction['mode'] == actual_mode)
+                        )
+                execute_t0 = time.perf_counter()
+                current_p = local_solver.execute(
                     P_current_csr.indptr,
                     P_current_csr.indices,
                     degree,
@@ -544,61 +541,53 @@ def run_experiment(run_id,args, save_dir):
                     args.alpha,
                     args.appr_eps,
                     source_indices,
+                    prediction,
                 )
-            ppr_dt = time.perf_counter() - ppr_t0
-            accounting_t0 = time.perf_counter()
-            if args.method == 'dyn_locPRB':
-                if external_fast_reset_stats is None:
-                    dynamic_solver.record_last_stats()
+                selected_execution_dt = time.perf_counter() - execute_t0
+                if prediction['mode'] == DYNAMIC:
+                    timing_breakdown[
+                        'adaptive_dynamic_execution_time'
+                    ] += selected_execution_dt
                 else:
-                    dynamic_solver.record_external_fast_reset(
-                        len(source_indices),
-                        external_fast_reset_stats[3],
-                        external_fast_reset_stats[1],
-                        external_fast_reset_stats[2],
-                    )
-                if (
-                    dynamic_fast_workspace is None
-                    and dynamic_solver.fast_reset_locked
-                ):
-                    dynamic_fast_workspace = (
-                        dynamic_solver.queue,
-                        dynamic_solver.queued,
-                    )
+                    timing_breakdown[
+                        'adaptive_scratch_execution_time'
+                    ] += selected_execution_dt
             else:
-                timing_breakdown['scratch_solves'] += 1
-                timing_breakdown['scratch_pushes'] += int(scratch_pushes)
-                timing_breakdown['scratch_edge_visits'] += int(scratch_edge_visits)
-                timing_breakdown['scratch_initial_active_nodes'] += int(scratch_active)
+                prediction = local_solver.scratch_prediction(
+                    num_nodes, P_current_csr.indptr
+                )
+                execute_t0 = time.perf_counter()
+                current_p = local_solver.execute(
+                    P_current_csr.indptr,
+                    P_current_csr.indices,
+                    degree,
+                    h_dense,
+                    args.alpha,
+                    args.appr_eps,
+                    source_indices,
+                    prediction,
+                )
+                timing_breakdown['adaptive_scratch_execution_time'] += (
+                    time.perf_counter() - execute_t0
+                )
+            ppr_wall_dt = time.perf_counter() - ppr_t0
+            ppr_dt = max(
+                0.0,
+                ppr_wall_dt - adaptive_prediction_dt - diagnostic_dt,
+            )
+            accounting_t0 = time.perf_counter()
             ppr_accounting_dt = time.perf_counter() - accounting_t0
             if (
                 args.method == 'dyn_locPRB'
-                and args.ppr_diagnostics
-                and t % args.ppr_diagnostic_every == 0
+                and scratch_diagnostic_p is not None
             ):
-                diagnostic_t0 = time.perf_counter()
-                scratch_diagnostic_p, scratch_pushes, _, _ = (
-                    diagnostic_scratch_kernel(
-                        num_nodes,
-                        P_current_csr.indptr,
-                        P_current_csr.indices,
-                        degree,
-                        h_dense,
-                        args.alpha,
-                        args.appr_eps,
-                        source_indices,
-                    )
-                )
+                diagnostic_post_t0 = time.perf_counter()
                 l1_error = float(
                     np.sum(np.abs(current_p - scratch_diagnostic_p))
                 )
-                timing_breakdown['diagnostic_checks'] += 1
                 timing_breakdown['diagnostic_l1_sum'] += l1_error
                 timing_breakdown['diagnostic_l1_max'] = max(
                     timing_breakdown['diagnostic_l1_max'], l1_error
-                )
-                timing_breakdown['diagnostic_scratch_pushes'] += int(
-                    scratch_pushes
                 )
                 diagnostic_candidate_ids = [
                     pair[1] + current_user_offset for pair in context_ind
@@ -607,8 +596,8 @@ def run_experiment(run_id,args, save_dir):
                     np.argmax(current_p[diagnostic_candidate_ids])
                     != np.argmax(scratch_diagnostic_p[diagnostic_candidate_ids])
                 )
-                diagnostic_dt = time.perf_counter() - diagnostic_t0
-                total_excluded_seconds += diagnostic_dt
+                diagnostic_dt += time.perf_counter() - diagnostic_post_t0
+            total_excluded_seconds += diagnostic_dt + adaptive_prediction_dt
             
         elif args.method == 'PRB':
             ppr_t0 = time.perf_counter()
@@ -618,7 +607,8 @@ def run_experiment(run_id,args, save_dir):
                 h_dense, 
                 args.power_T
             )
-            ppr_dt = time.perf_counter() - ppr_t0
+            ppr_wall_dt = time.perf_counter() - ppr_t0
+            ppr_dt = ppr_wall_dt
         
         
         # --- E. Decision & Reward ---
@@ -689,7 +679,13 @@ def run_experiment(run_id,args, save_dir):
             
         # --- H. Recording ---
         step_end = time.perf_counter()
-        step_duration = step_end - step_start - eval_dt - diagnostic_dt
+        step_duration = (
+            step_end
+            - step_start
+            - eval_dt
+            - diagnostic_dt
+            - adaptive_prediction_dt
+        )
         ppr_norm = np.sum(np.abs(current_p))
         current_total_time_excl_overhead = step_end - start_time_trial - total_excluded_seconds
         
@@ -712,14 +708,23 @@ def run_experiment(run_id,args, save_dir):
             0.0,
             online_step_elapsed
             - ppr_dt
+            - adaptive_prediction_dt
             - train_dt
             - diagnostic_dt
+            - ppr_accounting_dt
             - graph_update_dt
             - loader_dt
             - predict_source_dt
             - decision_dt,
         )
         timing_breakdown['ppr_time'] += ppr_dt
+        timing_breakdown['ppr_time_including_prediction'] += (
+            ppr_dt + adaptive_prediction_dt
+        )
+        timing_breakdown['adaptive_prediction_time'] += adaptive_prediction_dt
+        timing_breakdown['adaptive_prediction_calls'] += int(
+            args.method == 'dyn_locPRB'
+        )
         timing_breakdown['ppr_accounting_time'] += ppr_accounting_dt
         timing_breakdown['train_time'] += train_dt
         timing_breakdown['other_time'] += other_dt
@@ -728,15 +733,28 @@ def run_experiment(run_id,args, save_dir):
         timing_breakdown['decision_time'] += decision_dt
         timing_breakdown['graph_update_time'] += graph_update_dt
         timing_breakdown['diagnostic_time'] += diagnostic_dt
+        ppr_round_times.append(ppr_dt)
 
-    if dynamic_solver is not None:
-        for key, value in dynamic_solver.stats.items():
-            timing_breakdown[f'dynamic_{key}'] = value
+    if local_solver is not None:
+        solver_prefix = (
+            'adaptive_' if args.method == 'dyn_locPRB' else 'scratch_'
+        )
+        for key, value in local_solver.stats.items():
+            timing_breakdown[f'{solver_prefix}{key}'] = value
 
     # --- Final Save ---
     total_time = time.perf_counter() - start_time_trial - total_excluded_seconds
     end_to_end_seconds = time.perf_counter() - end_to_end_t0
     timing_breakdown['online_total_time'] = total_time
+    timing_breakdown['online_wall_time_including_prediction'] = (
+        total_time + timing_breakdown['adaptive_prediction_time']
+    )
+    if ppr_round_times:
+        timing_breakdown['ppr_round_mean'] = float(np.mean(ppr_round_times))
+        timing_breakdown['ppr_round_median'] = float(np.median(ppr_round_times))
+        timing_breakdown['ppr_round_p95'] = float(
+            np.percentile(ppr_round_times, 95)
+        )
     timing_breakdown['setup_time'] = setup_seconds
     timing_breakdown['warmup_time'] = warmup_seconds
     timing_breakdown['end_to_end_time'] = end_to_end_seconds
@@ -880,22 +898,23 @@ def main():
             for _, stats in valid_results
         )
         dynamic_pushes = sum(
-            stats.get('dynamic_pushes', 0) for _, stats in valid_results
+            stats.get('diagnostic_dynamic_pushes', 0)
+            for _, stats in valid_results
         )
         scratch_pushes = sum(
             stats.get('diagnostic_scratch_pushes', 0)
             for _, stats in valid_results
         )
         dynamic_edge_visits = sum(
-            stats.get('dynamic_edge_visits', 0)
+            stats.get('diagnostic_dynamic_edge_visits', 0)
             for _, stats in valid_results
         )
-        fallback_resets = sum(
-            stats.get('dynamic_fallback_resets', 0)
+        prediction_comparable = sum(
+            stats.get('diagnostic_prediction_comparable', 0)
             for _, stats in valid_results
         )
-        insert_updates = sum(
-            stats.get('dynamic_insert_updates', 0)
+        prediction_correct = sum(
+            stats.get('diagnostic_prediction_correct', 0)
             for _, stats in valid_results
         )
         print(
@@ -907,8 +926,8 @@ def main():
             f"Pushes: {dynamic_pushes} | "
             f"Scratch Pushes ({diagnostic_checks} checks): {scratch_pushes} | "
             f"Edge Visits: {dynamic_edge_visits} | "
-            f"Insert Updates: {insert_updates} | "
-            f"Fallback Resets: {fallback_resets} ==="
+            f"Prediction Accuracy: {prediction_correct}/"
+            f"{prediction_comparable} ==="
         )
     aggregate_metrics = {
         'schema_version': 1,
@@ -926,13 +945,19 @@ def main():
                 'ppr_time', 'train_time', 'graph_update_time', 'other_time',
                 'loader_time', 'predict_source_time', 'decision_time',
                 'evaluation_time', 'testset_build_time', 'diagnostic_time',
-                'online_total_time', 'setup_time', 'warmup_time', 'end_to_end_time'
+                'adaptive_prediction_time', 'ppr_time_including_prediction',
+                'online_total_time', 'online_wall_time_including_prediction',
+                'setup_time', 'warmup_time', 'end_to_end_time'
             )
         },
         'solver_totals': {
             key: sum(stats.get(key, 0) for _, stats in valid_results)
             for key in set().union(*(stats.keys() for _, stats in valid_results))
-            if key.startswith('scratch_') or key.startswith('dynamic_')
+            if (
+                key.startswith('scratch_')
+                or key.startswith('dynamic_')
+                or key.startswith('adaptive_')
+            )
         },
         'config': vars(args),
     }
