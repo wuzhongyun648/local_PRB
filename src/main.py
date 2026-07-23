@@ -32,7 +32,12 @@ warnings.filterwarnings("ignore", message=".*SparseEfficiencyWarning.*")
 from src.EENet import EE_Net
 from src import ppr_solver
 from src import utils
-from src.adaptive_appr import AdaptiveAPPR, DYNAMIC, SCRATCH
+from src.adaptive_appr import (
+    RESET_WRITE_WEIGHT,
+    AdaptiveAPPR,
+    DYNAMIC,
+    SCRATCH,
+)
 from src.experiment_configs import (
     DEFAULT_EE_NET_POOL_STEP,
     DEFAULT_HIDDEN,
@@ -282,6 +287,7 @@ def run_experiment(run_id,args, save_dir):
             warm_prediction = warm_solver.predict(
                 num_nodes,
                 P_current_csr.indptr,
+                P_current_csr.indices,
                 warm_degree,
                 warm_source,
                 args.alpha,
@@ -319,6 +325,7 @@ def run_experiment(run_id,args, save_dir):
         'ppr_time_including_prediction': 0.0,
         'adaptive_prediction_time': 0.0,
         'adaptive_prediction_calls': 0,
+        'adaptive_reset_write_weight': RESET_WRITE_WEIGHT,
         'adaptive_dynamic_execution_time': 0.0,
         'adaptive_scratch_execution_time': 0.0,
         'train_time': 0.0,
@@ -470,6 +477,7 @@ def run_experiment(run_id,args, save_dir):
                 prediction = local_solver.predict(
                     num_nodes,
                     P_current_csr.indptr,
+                    P_current_csr.indices,
                     degree,
                     h_dense,
                     args.alpha,
@@ -972,6 +980,7 @@ def main():
             and key not in {
                 'adaptive_prediction_time',
                 'adaptive_prediction_calls',
+                'adaptive_reset_write_weight',
                 'adaptive_dynamic_execution_time',
                 'adaptive_scratch_execution_time',
             }

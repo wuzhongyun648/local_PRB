@@ -12,9 +12,11 @@
 
 - 每轮重新构造候选 residual 并选择 DYN/scratch，没有永久锁定。
 - 候选 residual 精确包含历史 residual、source delta、有效无向插边修正。
-- cost 使用实际执行内核的分支构造操作数，以及候选 residual 的精确首层
-  active/push edge 工作下界；最终级联传播成本仍是预测量。它不再使用会把空图
-  一次 push 误判为数千次的 `abs(residual)/eps` 压力。
+- predictor 在只读副本上对 DYN 与 scratch 候选 residual 做完整影子传播，因此
+  得到精确候选 pushes/edge-visits；不会修改 live `p/r/source`。成本为影子
+  `pushes + edge_visits + branch-init`，scratch 连续数组写使用
+  `RESET_WRITE_WEIGHT=0.1` 的校准系数。全部影子传播属于预测时间，正式调整后
+  PPR/online time 排除它，包含预测的原始字段仍保留。
 - Python 与 Numba 共享同一内核；APPR `p/r/source/queue` 状态更新在同一执行内核。
 - Loc 与 adaptive DYN 复用同一种 scratch 执行路径和 caller-owned workspace。
 - `adaptive_prediction_time` 从 `ppr_time`、逐轮时间和 `online_total_time` 中扣除；

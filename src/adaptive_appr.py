@@ -29,10 +29,88 @@ except ModuleNotFoundError:
 
 SCRATCH = 1
 DYNAMIC = 0
+RESET_WRITE_WEIGHT = 0.1
+
+
+@njit(cache=True)
+def _simulate_candidate_work(
+    indptr,
+    indices,
+    degree,
+    candidate_residual,
+    current_support,
+    previous_support,
+    changed_nodes,
+    alpha,
+    eps,
+    include_history_seeds,
+):
+    """Return exact push/edge counts for a candidate residual."""
+    num_nodes = len(degree)
+    queue = np.empty(num_nodes + 1, dtype=np.int64)
+    queued = np.zeros(num_nodes, dtype=np.bool_)
+    front = 0
+    rear = 0
+
+    for idx in range(len(current_support)):
+        u = current_support[idx]
+        if (
+            not queued[u]
+            and abs(candidate_residual[u]) >= eps * degree[u]
+        ):
+            queue[rear] = u
+            rear = (rear + 1) % (num_nodes + 1)
+            queued[u] = True
+    if include_history_seeds:
+        for idx in range(len(previous_support)):
+            u = previous_support[idx]
+            if (
+                not queued[u]
+                and abs(candidate_residual[u]) >= eps * degree[u]
+            ):
+                queue[rear] = u
+                rear = (rear + 1) % (num_nodes + 1)
+                queued[u] = True
+        for idx in range(len(changed_nodes)):
+            u = changed_nodes[idx]
+            if (
+                not queued[u]
+                and abs(candidate_residual[u]) >= eps * degree[u]
+            ):
+                queue[rear] = u
+                rear = (rear + 1) % (num_nodes + 1)
+                queued[u] = True
+
+    pushes = 0
+    edge_visits = 0
+    while front != rear:
+        u = queue[front]
+        front = (front + 1) % (num_nodes + 1)
+        queued[u] = False
+        value = candidate_residual[u]
+        if abs(value) < eps * degree[u]:
+            continue
+        pushes += 1
+        candidate_residual[u] = 0.0
+        pushed = alpha * value / degree[u]
+        for edge_idx in range(indptr[u], indptr[u + 1]):
+            edge_visits += 1
+            v = indices[edge_idx]
+            candidate_residual[v] += pushed
+            if (
+                not queued[v]
+                and abs(candidate_residual[v]) >= eps * degree[v]
+            ):
+                queue[rear] = v
+                rear = (rear + 1) % (num_nodes + 1)
+                queued[v] = True
+    return pushes, edge_visits
 
 
 @njit(cache=True)
 def predict_adaptive_branch(
+    indptr,
+    indices,
     degree,
     p,
     residual,
@@ -46,29 +124,38 @@ def predict_adaptive_branch(
     can_continue,
     insertion_kind,
 ):
-    """Predict from the exact candidate residual without mutating APPR state.
-
-    The residual itself is exact. ``pressure_cost`` remains a propagation-work
-    proxy because downstream cascade pushes cannot be known without executing
-    the branch.
-    """
-    # Exact branch-construction operations plus an exact first-frontier work
-    # lower bound. Later cascade work remains a prediction.
-    scratch_cost = float(
+    """Measure both exact candidate residuals without mutating live state."""
+    scratch_init_cost = float(
         2 * len(degree)
         + 3 * len(current_support)
         + len(previous_support)
     )
-    scratch_active = 0
+    scratch_candidate = np.zeros(len(degree), dtype=np.float64)
     scratch_edge_lb = 0
     for idx in range(len(current_support)):
         u = current_support[idx]
         value = source[u]
+        scratch_candidate[u] = value
         threshold = eps * degree[u]
         if abs(value) >= threshold:
-            scratch_active += 1
             scratch_edge_lb += degree[u]
-            scratch_cost += 4.0 + float(degree[u])
+    scratch_pushes, scratch_edges = _simulate_candidate_work(
+        indptr,
+        indices,
+        degree,
+        scratch_candidate,
+        current_support,
+        previous_support,
+        changed_nodes,
+        alpha,
+        eps,
+        False,
+    )
+    scratch_cost = (
+        RESET_WRITE_WEIGHT * scratch_init_cost
+        + scratch_pushes
+        + scratch_edges
+    )
 
     if not can_continue:
         return (
@@ -76,9 +163,11 @@ def predict_adaptive_branch(
             np.inf,
             scratch_cost,
             0,
-            scratch_active,
+            scratch_pushes,
             0,
             scratch_edge_lb,
+            0,
+            scratch_edges,
         )
 
     max_candidates = (
@@ -138,12 +227,12 @@ def predict_adaptive_branch(
             correction_ba = alpha * mass_b * scale
             correction_bb = -mass_b * scale
 
-    dynamic_cost = float(
+    dynamic_init_cost = float(
         candidate_count
         + 2 * (len(current_support) + len(previous_support))
         + len(changed_nodes)
     )
-    dynamic_active = 0
+    dynamic_candidate = residual.copy()
     dynamic_edge_lb = 0
     for idx in range(candidate_count):
         u = candidates[idx]
@@ -152,21 +241,35 @@ def predict_adaptive_branch(
             value += correction_aa + correction_ba
         elif u == insert_b:
             value += correction_ab + correction_bb
+        dynamic_candidate[u] = value
         threshold = eps * degree[u]
         if abs(value) >= threshold:
-            dynamic_active += 1
             dynamic_edge_lb += degree[u]
-            dynamic_cost += 4.0 + float(degree[u])
+    dynamic_pushes, dynamic_edges = _simulate_candidate_work(
+        indptr,
+        indices,
+        degree,
+        dynamic_candidate,
+        current_support,
+        previous_support,
+        changed_nodes,
+        alpha,
+        eps,
+        True,
+    )
+    dynamic_cost = dynamic_init_cost + dynamic_pushes + dynamic_edges
 
     mode = DYNAMIC if dynamic_cost < scratch_cost else SCRATCH
     return (
         mode,
         dynamic_cost,
         scratch_cost,
-        dynamic_active,
-        scratch_active,
+        dynamic_pushes,
+        scratch_pushes,
         dynamic_edge_lb,
         scratch_edge_lb,
+        dynamic_edges,
+        scratch_edges,
     )
 
 
@@ -352,10 +455,12 @@ class AdaptiveAPPR:
             "dynamic_initial_active_nodes": 0,
             "predicted_dynamic_cost_sum": 0.0,
             "predicted_scratch_cost_sum": 0.0,
-            "predicted_dynamic_active_sum": 0,
-            "predicted_scratch_active_sum": 0,
+            "predicted_dynamic_pushes_sum": 0,
+            "predicted_scratch_pushes_sum": 0,
             "predicted_dynamic_edge_lb_sum": 0,
             "predicted_scratch_edge_lb_sum": 0,
+            "predicted_dynamic_edges_sum": 0,
+            "predicted_scratch_edges_sum": 0,
         }
 
     def _ensure_workspace(self, num_nodes):
@@ -407,6 +512,7 @@ class AdaptiveAPPR:
         self,
         num_nodes,
         indptr,
+        indices,
         degree,
         source,
         alpha,
@@ -431,6 +537,8 @@ class AdaptiveAPPR:
         )
         can_continue = not cold and not invalid and not force_scratch
         prediction = self.predict_impl(
+            indptr,
+            indices,
             degree,
             self.p,
             self.r,
@@ -449,10 +557,12 @@ class AdaptiveAPPR:
             "mode": mode,
             "dynamic_cost": float(prediction[1]),
             "scratch_cost": float(prediction[2]),
-            "dynamic_active": int(prediction[3]),
-            "scratch_active": int(prediction[4]),
+            "dynamic_predicted_pushes": int(prediction[3]),
+            "scratch_predicted_pushes": int(prediction[4]),
             "dynamic_edge_lb": int(prediction[5]),
             "scratch_edge_lb": int(prediction[6]),
+            "dynamic_predicted_edges": int(prediction[7]),
+            "scratch_predicted_edges": int(prediction[8]),
             "cold_start": bool(cold),
             "invalid_graph": bool(invalid),
             "changed_nodes": changed if insertion_kind else np.empty(0, dtype=np.int64),
@@ -470,8 +580,12 @@ class AdaptiveAPPR:
             "scratch_cost": 0.0,
             "dynamic_active": 0,
             "scratch_active": 0,
+            "dynamic_predicted_pushes": 0,
+            "scratch_predicted_pushes": 0,
             "dynamic_edge_lb": 0,
             "scratch_edge_lb": 0,
+            "dynamic_predicted_edges": 0,
+            "scratch_predicted_edges": 0,
             "cold_start": self.nnz is None,
             "invalid_graph": False,
             "changed_nodes": np.empty(0, dtype=np.int64),
@@ -535,10 +649,20 @@ class AdaptiveAPPR:
             self.stats["predicted_dynamic_cost_sum"] += prediction["dynamic_cost"]
         if np.isfinite(prediction["scratch_cost"]):
             self.stats["predicted_scratch_cost_sum"] += prediction["scratch_cost"]
-        self.stats["predicted_dynamic_active_sum"] += prediction["dynamic_active"]
-        self.stats["predicted_scratch_active_sum"] += prediction["scratch_active"]
+        self.stats["predicted_dynamic_pushes_sum"] += prediction[
+            "dynamic_predicted_pushes"
+        ]
+        self.stats["predicted_scratch_pushes_sum"] += prediction[
+            "scratch_predicted_pushes"
+        ]
         self.stats["predicted_dynamic_edge_lb_sum"] += prediction["dynamic_edge_lb"]
         self.stats["predicted_scratch_edge_lb_sum"] += prediction["scratch_edge_lb"]
+        self.stats["predicted_dynamic_edges_sum"] += prediction[
+            "dynamic_predicted_edges"
+        ]
+        self.stats["predicted_scratch_edges_sum"] += prediction[
+            "scratch_predicted_edges"
+        ]
         if mode == SCRATCH:
             self.stats["scratch_resets"] += 1
             self.stats["scratch_pushes"] += int(pushes)
@@ -567,6 +691,7 @@ class AdaptiveAPPR:
         prediction = self.predict(
             num_nodes,
             indptr,
+            indices,
             degree,
             source,
             alpha,

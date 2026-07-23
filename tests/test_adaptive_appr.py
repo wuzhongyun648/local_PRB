@@ -75,6 +75,8 @@ class AdaptiveAPPRTests(unittest.TestCase):
             predict_adaptive_branch, "py_func", predict_adaptive_branch
         )
         result = predictor(
+            np.array([0, 0, 0, 0], dtype=np.int64),
+            np.empty(0, dtype=np.int64),
             degree, p, residual, previous_source, source,
             np.array([1], dtype=np.int64),
             np.array([0], dtype=np.int64),
@@ -82,8 +84,8 @@ class AdaptiveAPPRTests(unittest.TestCase):
             0.85, 0.1, True, 0,
         )
         # Candidate residuals are exactly -0.99 at node 0 and 0.48 at node 1.
-        expected_dynamic = 3 * 2 + (4.0 + 2.0) + (4.0 + 3.0)
-        expected_scratch = 2 * 3 + 3 * 1 + 1 + (4.0 + 3.0)
+        expected_dynamic = 3 * 2 + 2
+        expected_scratch = 0.1 * (2 * 3 + 3 * 1 + 1) + 1
         self.assertAlmostEqual(result[1], expected_dynamic)
         self.assertAlmostEqual(result[2], expected_scratch)
         self.assertEqual(result[0], SCRATCH)
@@ -102,7 +104,7 @@ class AdaptiveAPPRTests(unittest.TestCase):
         )
         source = np.array([0.0, 1.0, 0.0])
         prediction = solver.predict(
-            3, graph.indptr, degree, source, 0.85, 1e-4,
+            3, graph.indptr, graph.indices, degree, source, 0.85, 1e-4,
             np.array([1], dtype=np.int64), np.empty(0, dtype=np.int64),
         )
         before = (
@@ -114,6 +116,22 @@ class AdaptiveAPPRTests(unittest.TestCase):
             np.array([1], dtype=np.int64), prediction,
         )
         self.assertEqual(set(outputs), {"dynamic", "scratch"})
+        self.assertEqual(
+            prediction["dynamic_predicted_pushes"],
+            outputs["dynamic"]["pushes"],
+        )
+        self.assertEqual(
+            prediction["scratch_predicted_pushes"],
+            outputs["scratch"]["pushes"],
+        )
+        self.assertEqual(
+            prediction["dynamic_predicted_edges"],
+            outputs["dynamic"]["edge_visits"],
+        )
+        self.assertEqual(
+            prediction["scratch_predicted_edges"],
+            outputs["scratch"]["edge_visits"],
+        )
         for actual, expected in zip(
             (solver.p, solver.r, solver.previous_source,
              solver.previous_support),
@@ -136,7 +154,7 @@ class AdaptiveAPPRTests(unittest.TestCase):
         triangle_degree = np.diff(triangle.indptr).astype(np.int64)
         source = np.array([0.0, 0.0, 1.0])
         prediction = solver.predict(
-            3, triangle.indptr, triangle_degree, source, 0.85, 1e-4,
+            3, triangle.indptr, triangle.indices, triangle_degree, source, 0.85, 1e-4,
             np.array([2], dtype=np.int64), np.array([0, 2], dtype=np.int64),
         )
         # Exercise the exact DYN transition regardless of the cost choice.
@@ -173,7 +191,7 @@ class AdaptiveAPPRTests(unittest.TestCase):
         directed_degree = np.diff(directed.indptr).astype(np.int64)
         source = np.array([0.0, 0.0, 1.0])
         prediction = solver.predict(
-            3, directed.indptr, directed_degree, source, 0.85, 1e-4,
+            3, directed.indptr, directed.indices, directed_degree, source, 0.85, 1e-4,
             np.array([2], dtype=np.int64), np.array([0, 2], dtype=np.int64),
         )
         self.assertEqual(prediction["insertion_kind"], 1)
@@ -211,10 +229,11 @@ class AdaptiveAPPRTests(unittest.TestCase):
             np.array([2], dtype=np.int64),
         )
         modes = []
-        for source, support in zip(sources, supports):
+        for idx, (source, support) in enumerate(zip(sources, supports)):
             prediction = solver.predict(
-                3, graph.indptr, degree, source, 0.85, 1e-4, support,
+                3, graph.indptr, graph.indices, degree, source, 0.85, 1e-4, support,
                 np.empty(0, dtype=np.int64),
+                force_scratch=idx == 2,
             )
             modes.append(prediction["mode"])
             solver.execute(
@@ -236,11 +255,11 @@ class AdaptiveAPPRTests(unittest.TestCase):
             (np.array([0.0, 0.0, 1.0]), np.array([2], dtype=np.int64)),
         ):
             pred_numba = compiled.predict(
-                3, graph.indptr, degree, source, 0.85, 1e-4, support,
+                3, graph.indptr, graph.indices, degree, source, 0.85, 1e-4, support,
                 np.empty(0, dtype=np.int64),
             )
             pred_python = python.predict(
-                3, graph.indptr, degree, source, 0.85, 1e-4, support,
+                3, graph.indptr, graph.indices, degree, source, 0.85, 1e-4, support,
                 np.empty(0, dtype=np.int64),
             )
             for key in pred_numba:

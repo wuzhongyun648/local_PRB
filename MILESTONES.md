@@ -12,7 +12,8 @@ scratch 快路径。该结果证明的是 scratch 实现路径差异，不是 DY
 当前重新打开 Milestone 3/4，要求：
 
 - 删除永久锁定，每轮都基于候选 residual 重新判断 DYN 或 scratch。
-- 候选 residual 包含历史 residual、source delta 和有效插边修正。
+- 候选 residual 包含历史 residual、source delta 和有效单向/双向插边修正；
+  predictor 在只读副本上完整影子传播两分支，得到精确候选 pushes/edge-visits。
 - Python/Numba 共享同一预测与执行内核；Numba 路径整体编译核心数值判断及
   APPR 状态更新。
 - DYN 预测判断单独计时，并从 PPR time、step time、online total time 中扣除；
