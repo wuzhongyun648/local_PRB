@@ -202,7 +202,19 @@ source delta、历史 residual、数组分配、push/edge visits 和自适应 sc
 此前“七数据集均达到”的结果已因永久 scratch 锁定而作废，报告
 `benchmarks/T1000_FINAL_NUMBA_VALIDATION.md` 仅保留为错误路径审计材料。
 
-状态：重新打开；真实可逆 adaptive DYN 已实现并通过单元测试，等待新 T=1000。
+最终结果：
+
+- 真实可逆 adaptive DYN 已完成；每轮都重新判断 DYN/scratch，不存在永久锁定。
+- predictor 精确覆盖 source delta、有效插边修正、候选传播和分支初始化；判断及状态
+  更新进入 Numba 编译路径。
+- Loc 运行等价 predictor control，并与 DYN 使用相同 cache scrub；prediction/control
+  均从 adjusted 时间中扣除并单独报告。
+- 七数据集 `T=1000` 的 Numba Loc/DYN regret 全部一致；DYN 分支合计 3027 轮，
+  scratch 分支合计 3973 轮。
+- Numba adjusted PPR 合计 Loc `34.427s`、DYN `25.307s`，DYN 快 `26.49%`。
+  逐数据集 5/7 达标；Facebook 和 Grqc 分别慢 `1.91%`、`1.32%`。
+
+状态：完成。最终实现 commit：`45099f4`。
 
 ## Milestone 4：`T=1000` 验证
 
@@ -228,7 +240,18 @@ source delta、历史 residual、数组分配、push/edge visits 和自适应 sc
   `Loc < PRB`；但 PRB 尚不是统一 paired rerun，PPA regret 尤其只能标记为 partial。
 - 选定 Numba 路线进入最终三版本；不启动 Test C 或完整论文实验。
 
-状态：重新打开，等待 Numba/Python 新 T=1000；PRB 仍暂用 Option A。
+新结果：
+
+- Numba 和纯 Python 的七数据集 Loc/DYN 矩阵均完成。
+- Numba adjusted PPR 合计达到 DYN < Loc；adjusted online total 也达到
+  DYN `610.099s` < Loc `619.990s`。
+- 纯 Python adjusted PPR 为 DYN `666.492s` > Loc `544.297s`，明确拒绝 Python
+  备选路线。
+- 方案 A 暂用参照支持 `Numba-Loc < PRB` 的速度关系，但 PRB 并非统一 paired
+  rerun，不能据此声称最终三方法 regret 已公平对齐。
+- 完整逐数据集与分项计时见 `benchmarks/T1000_REAL_ADAPTIVE_VALIDATION.md`。
+
+状态：完成；选择 Numba 路线。本阶段停止，不启动 Test C 或最终完整实验。
 
 ## Milestone 完成记录
 
@@ -237,5 +260,5 @@ source delta、历史 residual、数组分配、push/edge visits 和自适应 sc
 | 0 PRB 参照 | 完成 | 待本次提交 | `benchmarks/prb_option_a_reference.json` | 采用方案 A；PPA 标记为 partial |
 | 1 统一口径 | 完成 | `e5ff896` | 7 tests + MovieLens T=1 四路 smoke | 显式后端、预热、结构化计时已完成 |
 | 2 短诊断 | 完成 | `62cd631` | `benchmarks/BACKEND_DIAGNOSIS_T20_T100.md` | 已定位 source delta 导致的额外 push |
-| 3 真实 adaptive DYN | 进行中 | 待提交 | 16 tests + 短入口 | 已移除永久锁定；逐轮可逆判断 |
-| 4 T=1000 | 进行中 | 待运行 | Numba/Python 七数据集 | PRB 仍为 Option A interim |
+| 3 真实 adaptive DYN | 完成 | `45099f4` | 19 tests + Numba/Python 正式入口 | 逐轮可逆判断，精确候选成本 |
+| 4 T=1000 | 完成 | 本结果提交 | `benchmarks/T1000_REAL_ADAPTIVE_VALIDATION.md` | 选 Numba；聚合 DYN < Loc < PRB（PRB interim） |

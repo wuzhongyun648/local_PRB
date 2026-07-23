@@ -29,9 +29,18 @@
 - `adaptive_prediction_time` 从 `ppr_time`、逐轮时间和 `online_total_time` 中扣除；
   `ppr_time_including_prediction` 与 `online_wall_time_including_prediction` 保留原值。
 
-下一步是串行运行七数据集四组 T=1000：
-Numba Loc/DYN、Python Loc/DYN，并汇总 regret、整体、PPR、预测、训练、loader、
-图更新和其他时间。PRB 暂用 `benchmarks/prb_option_a_reference.json`。
+七数据集四组 T=1000 已全部完成。最终结果见
+`benchmarks/T1000_REAL_ADAPTIVE_VALIDATION.md`：
+
+- Numba Loc/DYN regret 七数据集完全一致。
+- Numba adjusted PPR 合计：DYN `25.307s` < Loc `34.427s`，快 `26.49%`；
+  逐数据集 5/7 达标，Facebook、Grqc 分别慢 `1.91%`、`1.32%`。
+- 纯 Python adjusted PPR 合计：DYN `666.492s` > Loc `544.297s`，不采用。
+- DYN/scratch 分支合计为 3027/3973，不存在永久 scratch 锁定。
+- PRB 继续暂用 `benchmarks/prb_option_a_reference.json`；它仅支持阶段速度参照，
+  最终论文实验必须统一 paired rerun。
+
+本阶段选择 Numba 路线，已经结束；不要自动启动 Test C 或最终完整实验。
 
 ## 1. 当前目标
 
