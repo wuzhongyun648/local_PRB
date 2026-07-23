@@ -321,7 +321,6 @@ def run_experiment(run_id,args, save_dir):
         'adaptive_prediction_calls': 0,
         'adaptive_dynamic_execution_time': 0.0,
         'adaptive_scratch_execution_time': 0.0,
-        'ppr_accounting_time': 0.0,
         'train_time': 0.0,
         'other_time': 0.0,
         'loader_time': 0.0,
@@ -459,7 +458,6 @@ def run_experiment(run_id,args, save_dir):
         ppr_dt = 0.0
         ppr_wall_dt = 0.0
         adaptive_prediction_dt = 0.0
-        ppr_accounting_dt = 0.0
         diagnostic_dt = 0.0
         scratch_diagnostic_p = None
         
@@ -571,12 +569,12 @@ def run_experiment(run_id,args, save_dir):
                     time.perf_counter() - execute_t0
                 )
             ppr_wall_dt = time.perf_counter() - ppr_t0
-            ppr_dt = max(
-                0.0,
-                ppr_wall_dt - adaptive_prediction_dt - diagnostic_dt,
-            )
-            accounting_t0 = time.perf_counter()
-            ppr_accounting_dt = time.perf_counter() - accounting_t0
+            ppr_excluded_dt = adaptive_prediction_dt + diagnostic_dt
+            if ppr_wall_dt + 1e-12 < ppr_excluded_dt:
+                raise RuntimeError(
+                    "PPR timing invariant violated: excluded work exceeds wall"
+                )
+            ppr_dt = ppr_wall_dt - ppr_excluded_dt
             if (
                 args.method == 'dyn_locPRB'
                 and scratch_diagnostic_p is not None
@@ -692,7 +690,7 @@ def run_experiment(run_id,args, save_dir):
         results_list.append([step_duration, sum_regret, loss1, loss2, ppr_norm])
         
         if t % 500 == 0:
-            print(f"Round {t} | Regret: {sum_regret:.0f} | Loss1: {loss1:.4f} | Loss2: {loss2:.4f} | TestAcc: {latest_test_acc:.2%} | Time: {current_total_time_excl_overhead:.4f}s (excl. testset&eval) | Norm: {ppr_norm:.2f}", flush=True)
+            print(f"Round {t} | Regret: {sum_regret:.0f} | Loss1: {loss1:.4f} | Loss2: {loss2:.4f} | TestAcc: {latest_test_acc:.2%} | Time: {current_total_time_excl_overhead:.4f}s (excl. testset, eval, diagnostics, DYN prediction) | Norm: {ppr_norm:.2f}", flush=True)
         
         if args.if_save and t % 1000 == 0 and t > 0:
             np.save(
@@ -711,7 +709,6 @@ def run_experiment(run_id,args, save_dir):
             - adaptive_prediction_dt
             - train_dt
             - diagnostic_dt
-            - ppr_accounting_dt
             - graph_update_dt
             - loader_dt
             - predict_source_dt
@@ -725,7 +722,6 @@ def run_experiment(run_id,args, save_dir):
         timing_breakdown['adaptive_prediction_calls'] += int(
             args.method == 'dyn_locPRB'
         )
-        timing_breakdown['ppr_accounting_time'] += ppr_accounting_dt
         timing_breakdown['train_time'] += train_dt
         timing_breakdown['other_time'] += other_dt
         timing_breakdown['loader_time'] += loader_dt
@@ -737,17 +733,22 @@ def run_experiment(run_id,args, save_dir):
 
     if local_solver is not None:
         solver_prefix = (
-            'adaptive_' if args.method == 'dyn_locPRB' else 'scratch_'
+            'adaptive_' if args.method == 'dyn_locPRB' else 'loc_'
         )
         for key, value in local_solver.stats.items():
             timing_breakdown[f'{solver_prefix}{key}'] = value
 
     # --- Final Save ---
-    total_time = time.perf_counter() - start_time_trial - total_excluded_seconds
+    raw_online_trial_wall = time.perf_counter() - start_time_trial
+    total_time = raw_online_trial_wall - total_excluded_seconds
     end_to_end_seconds = time.perf_counter() - end_to_end_t0
     timing_breakdown['online_total_time'] = total_time
-    timing_breakdown['online_wall_time_including_prediction'] = (
+    timing_breakdown['online_total_time_including_prediction'] = (
         total_time + timing_breakdown['adaptive_prediction_time']
+    )
+    timing_breakdown['raw_online_trial_wall_time'] = raw_online_trial_wall
+    timing_breakdown['end_to_end_time_excluding_prediction'] = (
+        end_to_end_seconds - timing_breakdown['adaptive_prediction_time']
     )
     if ppr_round_times:
         timing_breakdown['ppr_round_mean'] = float(np.mean(ppr_round_times))
@@ -761,7 +762,9 @@ def run_experiment(run_id,args, save_dir):
     
     print(
         f">>> [Worker {run_id}] Finished. Total Time: {total_time:.2f}s "
-        f"(excl. testset build & eval; deducted {total_excluded_seconds:.2f}s) | Total Regret: {sum_regret:.0f}",
+        "(excl. testset build, eval, diagnostics, and DYN prediction; "
+        f"deducted {total_excluded_seconds:.2f}s) | "
+        f"Total Regret: {sum_regret:.0f}",
         flush=True,
     )
     time_acc_save_path = os.path.join(save_dir, f"worker_{run_id}_TimeAcc.npy")
@@ -876,7 +879,7 @@ def main():
     print(f"=== All Done. Aggregated Shape: {final_data.shape} ===")
     print(
         "=== Online Time Breakdown Across All Runs "
-        f"(excl. testset build & eval) | "
+        f"(excl. testset build, eval, diagnostics, DYN prediction) | "
         f"Train: {total_train_time:.2f}s | "
         f"PPR: {total_ppr_time:.2f}s | "
         f"Other: {total_other_time:.2f}s ==="
@@ -946,18 +949,28 @@ def main():
                 'loader_time', 'predict_source_time', 'decision_time',
                 'evaluation_time', 'testset_build_time', 'diagnostic_time',
                 'adaptive_prediction_time', 'ppr_time_including_prediction',
-                'online_total_time', 'online_wall_time_including_prediction',
-                'setup_time', 'warmup_time', 'end_to_end_time'
+                'adaptive_dynamic_execution_time',
+                'adaptive_scratch_execution_time', 'online_total_time',
+                'online_total_time_including_prediction',
+                'raw_online_trial_wall_time', 'setup_time', 'warmup_time',
+                'end_to_end_time', 'end_to_end_time_excluding_prediction'
             )
         },
         'solver_totals': {
             key: sum(stats.get(key, 0) for _, stats in valid_results)
             for key in set().union(*(stats.keys() for _, stats in valid_results))
             if (
-                key.startswith('scratch_')
+                key.startswith('loc_')
+                or key.startswith('scratch_')
                 or key.startswith('dynamic_')
                 or key.startswith('adaptive_')
             )
+            and key not in {
+                'adaptive_prediction_time',
+                'adaptive_prediction_calls',
+                'adaptive_dynamic_execution_time',
+                'adaptive_scratch_execution_time',
+            }
         },
         'config': vars(args),
     }

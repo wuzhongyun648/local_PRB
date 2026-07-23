@@ -12,7 +12,8 @@
 
 - 每轮重新构造候选 residual 并选择 DYN/scratch，没有永久锁定。
 - 候选 residual 精确包含历史 residual、source delta、有效无向插边修正。
-- cost 同时估计分支构造工作与初始传播压力；最终传播成本仍是预测量。
+- cost 使用两分支候选 residual 的同口径初始传播压力；最终级联传播成本仍是
+  预测量。未把未经校准的连续数组清零与随机 edge work 强行按 1:1 混合。
 - Python 与 Numba 共享同一内核；APPR `p/r/source/queue` 状态更新在同一执行内核。
 - Loc 与 adaptive DYN 复用同一种 scratch 执行路径和 caller-owned workspace。
 - `adaptive_prediction_time` 从 `ppr_time`、逐轮时间和 `online_total_time` 中扣除；

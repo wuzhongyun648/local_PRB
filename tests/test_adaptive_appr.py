@@ -24,6 +24,18 @@ def path_graph():
 
 
 class AdaptiveAPPRTests(unittest.TestCase):
+    def assert_linear_invariant(
+        self, solver, graph, degree, source, alpha=0.85
+    ):
+        transition = graph @ sp.diags(1.0 / degree)
+        error = (
+            solver.p
+            - alpha * (transition @ solver.p)
+            + (1.0 - alpha) * solver.r
+            - (1.0 - alpha) * source
+        )
+        self.assertLess(float(np.max(np.abs(error))), 1e-12)
+
     def test_forced_scratch_matches_reference_and_reuses_workspace(self):
         graph, degree = path_graph()
         solver = AdaptiveAPPR("python")
@@ -70,12 +82,8 @@ class AdaptiveAPPRTests(unittest.TestCase):
             0.85, 0.1, True,
         )
         # Candidate residuals are exactly -0.99 at node 0 and 0.48 at node 1.
-        expected_dynamic = (
-            3 * 2
-            + max(2.0, 0.99 / 0.1)
-            + max(3.0, 0.48 / 0.1)
-        )
-        expected_scratch = 2 * 3 + 3 * 1 + 1 + max(3.0, 0.5 / 0.1)
+        expected_dynamic = max(2.0, 0.99 / 0.1) + max(3.0, 0.48 / 0.1)
+        expected_scratch = max(3.0, 0.5 / 0.1)
         self.assertAlmostEqual(result[1], expected_dynamic)
         self.assertAlmostEqual(result[2], expected_scratch)
         self.assertEqual(result[0], SCRATCH)
@@ -150,6 +158,36 @@ class AdaptiveAPPRTests(unittest.TestCase):
             0.85, 1e-4, np.array([2], dtype=np.int64), reset_prediction,
         )
         np.testing.assert_array_equal(solver.p, expected)
+
+    def test_scratch_dynamic_scratch_dynamic_sequence(self):
+        graph, degree = path_graph()
+        solver = AdaptiveAPPR("python")
+        sources = (
+            np.array([1.0, 0.0, 0.0]),
+            np.array([1.0, 0.0, 0.0]),
+            np.array([0.0, 0.0, 1.0]),
+            np.array([0.0, 0.0, 1.0]),
+        )
+        supports = (
+            np.array([0], dtype=np.int64),
+            np.array([0], dtype=np.int64),
+            np.array([2], dtype=np.int64),
+            np.array([2], dtype=np.int64),
+        )
+        modes = []
+        for source, support in zip(sources, supports):
+            prediction = solver.predict(
+                3, graph.indptr, degree, source, 0.85, 1e-4, support,
+                np.empty(0, dtype=np.int64),
+            )
+            modes.append(prediction["mode"])
+            solver.execute(
+                graph.indptr, graph.indices, degree, source, 0.85, 1e-4,
+                support, prediction,
+            )
+            self.assert_linear_invariant(solver, graph, degree, source)
+            self.assertFalse(np.any(solver.queued))
+        self.assertEqual(modes, [SCRATCH, DYNAMIC, SCRATCH, DYNAMIC])
 
     @unittest.skipUnless(NUMBA_AVAILABLE, "Numba is not installed")
     def test_python_and_numba_sequences_are_identical(self):

@@ -51,14 +51,7 @@ def predict_adaptive_branch(
     proxy because downstream cascade pushes cannot be known without executing
     the branch.
     """
-    # Branch-construction work is part of execution even though this predictor
-    # itself is excluded from reported time. Scratch clears p/r across the
-    # whole graph; DYN only merges sparse supports and insertion endpoints.
-    scratch_cost = float(
-        2 * len(degree)
-        + 3 * len(current_support)
-        + len(previous_support)
-    )
+    scratch_cost = 0.0
     scratch_active = 0
     scratch_edge_lb = 0
     for idx in range(len(current_support)):
@@ -137,10 +130,7 @@ def predict_adaptive_branch(
         correction_ba = alpha * mass_b * scale
         correction_bb = -mass_b * scale
 
-    dynamic_cost = float(
-        3 * (len(current_support) + len(previous_support))
-        + len(changed_nodes)
-    )
+    dynamic_cost = 0.0
     dynamic_active = 0
     dynamic_edge_lb = 0
     for idx in range(candidate_count):
