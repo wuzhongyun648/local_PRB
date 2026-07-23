@@ -30,6 +30,12 @@ except ModuleNotFoundError:
 SCRATCH = 1
 DYNAMIC = 0
 RESET_WRITE_WEIGHT = 0.1
+PREDICTION_CACHE_SCRUB_BYTES = 48 * 1024 * 1024
+
+
+@njit(cache=True)
+def _scrub_prediction_cache(buffer, value):
+    buffer.fill(value)
 
 
 @njit(cache=True)
@@ -427,6 +433,15 @@ class AdaptiveAPPR:
     def __init__(self, backend="auto"):
         self.backend = backend
         self.predict_impl, self.execute_impl = resolve_adaptive_kernels(backend)
+        self.scrub_impl = (
+            _scrub_prediction_cache
+            if backend in ("auto", "numba")
+            else getattr(
+                _scrub_prediction_cache,
+                "py_func",
+                _scrub_prediction_cache,
+            )
+        )
         self.reset()
 
     def reset(self):
@@ -441,6 +456,7 @@ class AdaptiveAPPR:
         self.queued = None
         self.last_prediction = None
         self.last_execution = None
+        self.prediction_cache_scrub = None
         self.stats = {
             "solves": 0,
             "scratch_resets": 0,
@@ -461,6 +477,7 @@ class AdaptiveAPPR:
             "predicted_scratch_edge_lb_sum": 0,
             "predicted_dynamic_edges_sum": 0,
             "predicted_scratch_edges_sum": 0,
+            "prediction_cache_scrubs": 0,
         }
 
     def _ensure_workspace(self, num_nodes):
@@ -470,6 +487,16 @@ class AdaptiveAPPR:
             self.previous_source = np.zeros(num_nodes, dtype=np.float64)
             self.queue = np.zeros(num_nodes + 1, dtype=np.int64)
             self.queued = np.zeros(num_nodes, dtype=np.bool_)
+
+    def _scrub_cache_after_prediction(self):
+        if self.prediction_cache_scrub is None:
+            count = PREDICTION_CACHE_SCRUB_BYTES // np.dtype(np.float64).itemsize
+            self.prediction_cache_scrub = np.empty(count, dtype=np.float64)
+        self.scrub_impl(
+            self.prediction_cache_scrub,
+            float(self.stats["prediction_cache_scrubs"] & 1),
+        )
+        self.stats["prediction_cache_scrubs"] += 1
 
     def _resolve_change(self, degree, nnz, changed_nodes_hint):
         if self.nnz is None:
@@ -569,6 +596,10 @@ class AdaptiveAPPR:
             "insertion_kind": insertion_kind,
             "nnz": nnz,
         }
+        # Shadow propagation touches CSR/state heavily. Evict it before the
+        # separately timed live execution so excluded prediction work cannot
+        # leave a cache-speedup artifact.
+        self._scrub_cache_after_prediction()
         return self.last_prediction
 
     def scratch_prediction(self, num_nodes, indptr):

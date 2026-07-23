@@ -17,6 +17,9 @@
   `pushes + edge_visits + branch-init`，scratch 连续数组写使用
   `RESET_WRITE_WEIGHT=0.1` 的校准系数。全部影子传播属于预测时间，正式调整后
   PPR/online time 排除它，包含预测的原始字段仍保留。
+- predictor 后固定 scrub 48 MiB cache buffer，scrub 也计入预测时间；目的是避免
+  被排除的影子传播把 CSR/残差留在 CPU cache 中、给随后 DYN execute 制造隐藏优势。
+  正式 timing run 应将整个进程固定到一个 CPU core，避免跨 socket 迁移。
 - Python 与 Numba 共享同一内核；APPR `p/r/source/queue` 状态更新在同一执行内核。
 - Loc 与 adaptive DYN 复用同一种 scratch 执行路径和 caller-owned workspace。
 - `adaptive_prediction_time` 从 `ppr_time`、逐轮时间和 `online_total_time` 中扣除；

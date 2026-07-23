@@ -33,6 +33,7 @@ from src.EENet import EE_Net
 from src import ppr_solver
 from src import utils
 from src.adaptive_appr import (
+    PREDICTION_CACHE_SCRUB_BYTES,
     RESET_WRITE_WEIGHT,
     AdaptiveAPPR,
     DYNAMIC,
@@ -326,6 +327,7 @@ def run_experiment(run_id,args, save_dir):
         'adaptive_prediction_time': 0.0,
         'adaptive_prediction_calls': 0,
         'adaptive_reset_write_weight': RESET_WRITE_WEIGHT,
+        'adaptive_cache_scrub_bytes': PREDICTION_CACHE_SCRUB_BYTES,
         'adaptive_dynamic_execution_time': 0.0,
         'adaptive_scratch_execution_time': 0.0,
         'train_time': 0.0,
@@ -981,6 +983,7 @@ def main():
                 'adaptive_prediction_time',
                 'adaptive_prediction_calls',
                 'adaptive_reset_write_weight',
+                'adaptive_cache_scrub_bytes',
                 'adaptive_dynamic_execution_time',
                 'adaptive_scratch_execution_time',
             }

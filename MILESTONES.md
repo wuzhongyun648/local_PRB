@@ -18,6 +18,8 @@ scratch 快路径。该结果证明的是 scratch 实现路径差异，不是 DY
   APPR 状态更新。
 - DYN 预测判断单独计时，并从 PPR time、step time、online total time 中扣除；
   同时保留包含预测时间的原始对照字段。
+- 精确影子传播后 scrub 48 MiB cache buffer，防止被扣除的预测阶段通过热缓存
+  污染随后正式 execute；性能矩阵固定单 CPU core。
 - Loc 与自适应 DYN 使用同一可复用 `p/r/queue/queued` scratch 执行内核。
 - 重新运行七数据集的 Numba 与 Python、Loc 与 DYN，均为 T=1000。
 
