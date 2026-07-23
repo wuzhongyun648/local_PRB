@@ -8,6 +8,7 @@ from src.adaptive_appr import (
     SCRATCH,
     AdaptiveAPPR,
     NUMBA_AVAILABLE,
+    _simulate_candidate_work,
     predict_adaptive_branch,
 )
 from src.ppr_solver import appr_with_diagnostics
@@ -279,6 +280,14 @@ class AdaptiveAPPRTests(unittest.TestCase):
             )
             np.testing.assert_array_equal(actual, expected)
             np.testing.assert_array_equal(compiled.r, python.r)
+
+    @unittest.skipUnless(NUMBA_AVAILABLE, "Numba is not installed")
+    def test_python_predictor_uses_python_shadow_helper(self):
+        solver = AdaptiveAPPR("python")
+        self.assertIs(
+            solver.predict_impl.__globals__["_simulate_candidate_work"],
+            _simulate_candidate_work.py_func,
+        )
 
 
 if __name__ == "__main__":

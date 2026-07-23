@@ -21,6 +21,9 @@
   DYN 采用预测分支并计入 `adaptive_prediction_time`；Loc 强制 scratch，整段计入
   `cache_control_time`。二者都从 adjusted 时间扣除，从而同时对齐 cache、CPU
   frequency 和预测工作量。正式 timing run 固定到一个 CPU core。
+- Python resolver 不只调用顶层 dispatcher 的 `.py_func`，还显式把嵌套影子传播
+  helper 替换为其 `.py_func`；因此 Python 矩阵的 predictor 与 execute 都不使用
+  Numba。
 - Python 与 Numba 共享同一内核；APPR `p/r/source/queue` 状态更新在同一执行内核。
 - Loc 与 adaptive DYN 复用同一种 scratch 执行路径和 caller-owned workspace。
 - `adaptive_prediction_time` 从 `ppr_time`、逐轮时间和 `online_total_time` 中扣除；

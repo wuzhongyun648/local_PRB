@@ -1,6 +1,7 @@
 """Reversible adaptive APPR with shared Python/Numba kernels."""
 
 import time
+import types
 import warnings
 
 import numpy as np
@@ -420,8 +421,24 @@ def resolve_adaptive_kernels(backend):
             )
         return predict_adaptive_branch, execute_selected_branch
     if backend == "python":
+        predictor = getattr(
+            predict_adaptive_branch, "py_func", predict_adaptive_branch
+        )
+        helper = getattr(
+            _simulate_candidate_work, "py_func", _simulate_candidate_work
+        )
+        if hasattr(predict_adaptive_branch, "py_func"):
+            python_globals = dict(predictor.__globals__)
+            python_globals["_simulate_candidate_work"] = helper
+            predictor = types.FunctionType(
+                predictor.__code__,
+                python_globals,
+                predictor.__name__,
+                predictor.__defaults__,
+                predictor.__closure__,
+            )
         return (
-            getattr(predict_adaptive_branch, "py_func", predict_adaptive_branch),
+            predictor,
             getattr(execute_selected_branch, "py_func", execute_selected_branch),
         )
     raise ValueError(f"Unknown adaptive backend: {backend!r}")
