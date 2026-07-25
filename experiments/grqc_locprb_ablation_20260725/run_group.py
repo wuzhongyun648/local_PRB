@@ -9,7 +9,7 @@ import sys
 import time
 from pathlib import Path
 
-from variants import GROUPS
+from variants import GROUPS, VARIANTS
 
 
 HERE = Path(__file__).resolve().parent
@@ -19,6 +19,16 @@ RUNNER = HERE / "runner.py"
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--group", choices=sorted(GROUPS), required=True)
+    parser.add_argument(
+        "--variants",
+        choices=sorted(VARIANTS),
+        nargs="+",
+        help="Optional explicit queue; defaults to every variant in --group.",
+    )
+    parser.add_argument(
+        "--queue-name",
+        help="Status/log namespace; defaults to --group.",
+    )
     parser.add_argument("--rounds", type=int, default=1000)
     parser.add_argument("--seeds", type=int, nargs="+", default=[100, 101, 102])
     parser.add_argument("--data-dir", required=True)
@@ -34,10 +44,12 @@ def main():
     root = Path(args.output_dir)
     queue_dir = root / "queues"
     queue_dir.mkdir(parents=True, exist_ok=True)
-    queue_status = queue_dir / f"{args.group}_T{args.rounds}.json"
+    queue_name = args.queue_name or args.group
+    variants = args.variants or GROUPS[args.group]
+    queue_status = queue_dir / f"{queue_name}_T{args.rounds}.json"
     tasks = [
         {"variant": variant, "seed": seed}
-        for variant in GROUPS[args.group]
+        for variant in variants
         for seed in args.seeds
     ]
     completed = 0
@@ -46,7 +58,7 @@ def main():
     for index, task in enumerate(tasks):
         variant = task["variant"]
         seed = task["seed"]
-        log_dir = root / "task_logs" / args.group
+        log_dir = root / "task_logs" / queue_name
         log_dir.mkdir(parents=True, exist_ok=True)
         log_path = log_dir / f"{variant}_seed{seed:03d}_T{args.rounds}.log"
         command = [
@@ -71,6 +83,7 @@ def main():
         state = {
             "status": "running",
             "group": args.group,
+            "queue_name": queue_name,
             "rounds": args.rounds,
             "task_index": index,
             "task_count": len(tasks),
@@ -82,7 +95,7 @@ def main():
         }
         queue_status.write_text(json.dumps(state, indent=2), encoding="utf-8")
         print(
-            f"QUEUE {args.group}: {index + 1}/{len(tasks)} "
+            f"QUEUE {queue_name}: {index + 1}/{len(tasks)} "
             f"{variant} seed={seed}",
             flush=True,
         )
@@ -103,6 +116,7 @@ def main():
     final = {
         "status": "complete" if not failed and completed == len(tasks) else "failed",
         "group": args.group,
+        "queue_name": queue_name,
         "rounds": args.rounds,
         "task_count": len(tasks),
         "completed": completed,
@@ -117,4 +131,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

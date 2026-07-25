@@ -148,3 +148,14 @@ Within each queue, variants and seeds run sequentially. Each task writes an
 atomic `status.json`; completed tasks are skipped on restart and failed tasks
 retain their logs.
 
+After the T=1000 screen, run the selected unique configurations at T=10000:
+
+```bash
+bash experiments/grqc_locprb_ablation_20260725/launch_confirmation.sh \
+  DATA_DIR OUTPUT_DIR LOG_DIR 10000 200 201 202 203 204
+```
+
+The confirmation queues intentionally avoid exact duplicate configurations:
+`sf_all_fixed`, `r1_locprb`, and `p0_raw` are equivalent; `g1_current_loc` and
+`s0_legacy` are equivalent. Results from the representative are reused for
+those labeled comparisons.
