@@ -13,11 +13,14 @@ mkdir -p "$OUTPUT_DIR" "$LOG_DIR"
 
 for GPU in 0 1 2 3; do
   CUDA_VISIBLE_DEVICES=$GPU \
-  OMP_NUM_THREADS=8 \
-  MKL_NUM_THREADS=8 \
-  OPENBLAS_NUM_THREADS=8 \
+  OMP_NUM_THREADS=1 \
+  MKL_NUM_THREADS=1 \
+  OPENBLAS_NUM_THREADS=1 \
+  NUMEXPR_NUM_THREADS=1 \
+  TORCH_NUM_THREADS=1 \
   nohup python -u "$SCRIPT_DIR/run_queue.py" \
     --queue "$GPU" \
+    --workers 10 \
     --output-dir "$OUTPUT_DIR" \
     --continue-on-error \
     > "$LOG_DIR/gpu${GPU}.log" 2>&1 < /dev/null &
